@@ -29,10 +29,8 @@
     <key>SUFeedURL</key>
     <string>https://raw.githubusercontent.com/Gremble-io/Tome/gh-pages/appcast.xml</string>
     <key>SUEnableAutomaticChecks</key>
-    <false/>
-    <!-- Generate your own Sparkle EdDSA key pair before enabling auto-updates -->
-    <!-- Run: ./Tome/.build/artifacts/sparkle/Sparkle/bin/generate_keys -->
+    <true/>
     <key>SUPublicEDKey</key>
-    <string></string>
+    <string>LT2/oCSuJPmnri+6b62DV1WhHxSmWrJ1nZzbAK2ipV4=</string>
 </dict>
 </plist>
