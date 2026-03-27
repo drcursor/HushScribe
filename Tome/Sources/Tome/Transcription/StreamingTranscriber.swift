@@ -44,14 +44,17 @@ final class StreamingTranscriber: @unchecked Sendable {
     private static let flushInterval = 480_000
 
     /// Main loop: reads audio buffers, runs VAD, transcribes speech segments.
-    func run(stream: AsyncStream<AVAudioPCMBuffer>) async {
+    /// Returns `true` if the loop exited due to fatal (repeated) errors.
+    @discardableResult
+    func run(stream: AsyncStream<AVAudioPCMBuffer>) async -> Bool {
         var vadState = await vadManager.makeStreamState()
         var speechSamples: [Float] = []
         var vadBuffer: [Float] = []
         var isSpeaking = false
         var bufferCount = 0
+        var consecutiveErrors = 0
 
-        for await buffer in stream {
+        outerLoop: for await buffer in stream {
             bufferCount += 1
             if bufferCount <= 3 {
                 let fmt = buffer.format
@@ -80,6 +83,7 @@ final class StreamingTranscriber: @unchecked Sendable {
                         timeResolution: 2
                     )
                     vadState = result.state
+                    consecutiveErrors = 0
 
                     if let event = result.event {
                         switch event.kind {
@@ -94,7 +98,12 @@ final class StreamingTranscriber: @unchecked Sendable {
                             if speechSamples.count > 8000 {
                                 let segment = speechSamples
                                 speechSamples.removeAll(keepingCapacity: true)
-                                await transcribeSegment(segment)
+                                if await !transcribeSegment(segment) {
+                                    consecutiveErrors += 1
+                                    if consecutiveErrors > 10 { break outerLoop }
+                                } else {
+                                    consecutiveErrors = 0
+                                }
                             } else {
                                 speechSamples.removeAll(keepingCapacity: true)
                             }
@@ -108,11 +117,18 @@ final class StreamingTranscriber: @unchecked Sendable {
                         if speechSamples.count >= Self.flushInterval {
                             let segment = speechSamples
                             speechSamples.removeAll(keepingCapacity: true)
-                            await transcribeSegment(segment)
+                            if await !transcribeSegment(segment) {
+                                consecutiveErrors += 1
+                                if consecutiveErrors > 10 { break outerLoop }
+                            } else {
+                                consecutiveErrors = 0
+                            }
                         }
                     }
                 } catch {
                     log.error("VAD error: \(error.localizedDescription)")
+                    consecutiveErrors += 1
+                    if consecutiveErrors > 10 { break outerLoop }
                 }
             }
         }
@@ -120,17 +136,22 @@ final class StreamingTranscriber: @unchecked Sendable {
         if speechSamples.count > 8000 {
             await transcribeSegment(speechSamples)
         }
+
+        return consecutiveErrors > 10
     }
 
-    private func transcribeSegment(_ samples: [Float]) async {
+    /// Returns `true` on success, `false` on ASR error.
+    private func transcribeSegment(_ samples: [Float]) async -> Bool {
         do {
             let result = try await asrManager.transcribe(samples, source: audioSource)
             let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !text.isEmpty else { return }
+            guard !text.isEmpty else { return true }
             log.info("[\(self.speaker.rawValue)] transcribed: \(text.prefix(80))")
             onFinal(text)
+            return true
         } catch {
             log.error("ASR error: \(error.localizedDescription)")
+            return false
         }
     }
 

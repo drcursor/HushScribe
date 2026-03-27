@@ -28,6 +28,8 @@ struct ContentView: View {
     @State private var activeSessionType: SessionType?
     @State private var detectedAppName: String?
     @State private var silenceSeconds: Int = 0
+    @State private var savedFileURL: URL?
+    @State private var bannerDismissTask: Task<Void, Never>?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -44,6 +46,26 @@ struct ContentView: View {
             )
 
             Divider()
+
+            if let url = savedFileURL, activeSessionType == nil {
+                HStack {
+                    Text("Saved to \(url.lastPathComponent)")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.fg2)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer()
+                    Button("Show in Finder") {
+                        NSWorkspace.shared.selectFile(url.path, inFileSystemAtPath: url.deletingLastPathComponent().path)
+                        savedFileURL = nil
+                    }
+                    .font(.system(size: 11))
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.accent1)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
+            }
 
             // Bottom bar: capture buttons + controls
             ControlBar(
@@ -161,12 +183,14 @@ struct ContentView: View {
     private func startSession(type: SessionType) {
         transcriptStore.clear()
         silenceSeconds = 0
-        activeSessionType = type
+        savedFileURL = nil
+        bannerDismissTask?.cancel()
 
         // Determine output folder and app bundle ID based on session type
         let outputPath: String
         let sourceApp: String
         var appBundleID: String?
+        var resolvedAppName: String?
 
         switch type {
         case .callCapture:
@@ -177,24 +201,31 @@ struct ContentView: View {
                let appName = conferencingBundleIDs[bundleID] {
                 sourceApp = appName
                 appBundleID = bundleID
-                detectedAppName = appName
+                resolvedAppName = appName
             } else {
                 sourceApp = "Call"
-                detectedAppName = nil
             }
         case .voiceMemo:
             outputPath = settings.vaultVoicePath
             sourceApp = "Voice Memo"
-            detectedAppName = nil
         }
 
         Task {
+            transcriptionEngine?.lastError = nil
             await sessionStore.startSession()
-            await transcriptLogger.startSession(
-                sourceApp: sourceApp,
-                vaultPath: outputPath,
-                sessionType: type
-            )
+            do {
+                try await transcriptLogger.startSession(
+                    sourceApp: sourceApp,
+                    vaultPath: outputPath,
+                    sessionType: type
+                )
+            } catch {
+                await sessionStore.endSession()
+                transcriptionEngine?.lastError = error.localizedDescription
+                return
+            }
+            activeSessionType = type
+            detectedAppName = resolvedAppName
             if type == .callCapture {
                 await transcriptionEngine?.start(
                     locale: settings.locale,
@@ -230,7 +261,17 @@ struct ContentView: View {
             }
 
             // Finalize frontmatter AFTER diarization (duration, speakers, rename)
-            await transcriptLogger.finalizeFrontmatter()
+            let savedPath = await transcriptLogger.finalizeFrontmatter()
+
+            // Only show banner if not already in a new session
+            if activeSessionType == nil, let savedPath {
+                savedFileURL = savedPath
+                bannerDismissTask?.cancel()
+                bannerDismissTask = Task {
+                    try? await Task.sleep(for: .seconds(8))
+                    if !Task.isCancelled { savedFileURL = nil }
+                }
+            }
         }
     }
 

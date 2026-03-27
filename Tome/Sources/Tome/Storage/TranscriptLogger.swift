@@ -1,5 +1,12 @@
 import Foundation
 
+enum TranscriptLoggerError: LocalizedError {
+    case cannotCreateFile(String)
+    var errorDescription: String? {
+        switch self { case .cannotCreateFile(let p): return "Cannot create transcript at \(p)" }
+    }
+}
+
 /// Writes structured markdown transcripts to the vault.
 actor TranscriptLogger {
     private var fileHandle: FileHandle?
@@ -20,7 +27,7 @@ actor TranscriptLogger {
     private var lastSpeakersDetected: Set<String> = []
     private var lastSessionContext: String = ""
 
-    func startSession(sourceApp: String, vaultPath: String, sessionType: SessionType = .callCapture) {
+    func startSession(sourceApp: String, vaultPath: String, sessionType: SessionType = .callCapture) throws {
         self.sourceApp = sourceApp
         self.sessionStartTime = Date()
         self.speakersDetected = []
@@ -31,7 +38,7 @@ actor TranscriptLogger {
 
         let expandedPath = NSString(string: vaultPath).expandingTildeInPath
         let directory = URL(fileURLWithPath: expandedPath)
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
         let now = sessionStartTime!
         let fileFmt = DateFormatter()
@@ -87,8 +94,9 @@ tags:
 
 """
 
-        FileManager.default.createFile(atPath: currentFilePath!.path, contents: content.data(using: .utf8))
-        fileHandle = try? FileHandle(forWritingTo: currentFilePath!)
+        let created = FileManager.default.createFile(atPath: currentFilePath!.path, contents: content.data(using: .utf8))
+        guard created else { throw TranscriptLoggerError.cannotCreateFile(currentFilePath!.path) }
+        fileHandle = try FileHandle(forWritingTo: currentFilePath!)
         fileHandle?.seekToEndOfFile()
     }
 
@@ -189,9 +197,10 @@ tags:
 
     /// Call AFTER diarization is complete. Rewrites frontmatter with correct
     /// duration, speaker count, attendees, and optionally renames the file.
-    func finalizeFrontmatter() async {
+    @discardableResult
+    func finalizeFrontmatter() async -> URL? {
         guard let filePath = lastSessionFilePath,
-              let startTime = lastSessionStartTime else { return }
+              let startTime = lastSessionStartTime else { return nil }
 
         await Self.rewriteFrontmatter(
             filePath: filePath,
@@ -214,9 +223,11 @@ tags:
             lastSessionFilePath = newPath
         }
 
+        let savedPath = lastSessionFilePath
         lastSessionStartTime = nil
         lastSpeakersDetected = []
         lastSessionContext = ""
+        return savedPath
     }
 
     private static func rewriteFrontmatter(
