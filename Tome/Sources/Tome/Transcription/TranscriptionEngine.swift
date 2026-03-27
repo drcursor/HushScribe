@@ -25,7 +25,7 @@ func diagLog(_ msg: String) {
 final class TranscriptionEngine {
     private(set) var isRunning = false
     private(set) var assetStatus: String = "Ready"
-    private(set) var lastError: String?
+    var lastError: String?
 
     private let systemCapture = SystemAudioCapture()
     private let micCapture = MicCapture()
@@ -130,8 +130,11 @@ final class TranscriptionEngine {
                 }
             }
         )
-        micTask = Task.detached {
-            await micTranscriber.run(stream: micStream)
+        micTask = Task.detached { [weak self] in
+            let hadFatalError = await micTranscriber.run(stream: micStream)
+            if hadFatalError {
+                await MainActor.run { self?.lastError = "Mic transcription failed — restart session" }
+            }
         }
 
         // 5. Start system audio transcription
@@ -151,8 +154,11 @@ final class TranscriptionEngine {
                     }
                 }
             )
-            sysTask = Task.detached {
-                await sysTranscriber.run(stream: sysStream)
+            sysTask = Task.detached { [weak self] in
+                let hadFatalError = await sysTranscriber.run(stream: sysStream)
+                if hadFatalError {
+                    await MainActor.run { self?.lastError = "System audio transcription failed — restart session" }
+                }
             }
         }
 
@@ -205,8 +211,11 @@ final class TranscriptionEngine {
                 }
             }
         )
-        micTask = Task.detached {
-            await micTranscriber.run(stream: micStream)
+        micTask = Task.detached { [weak self] in
+            let hadFatalError = await micTranscriber.run(stream: micStream)
+            if hadFatalError {
+                await MainActor.run { self?.lastError = "Mic transcription failed — restart session" }
+            }
         }
 
         diagLog("[ENGINE-MIC-SWAP] mic restarted on device \(targetMicID)")
@@ -280,6 +289,7 @@ final class TranscriptionEngine {
     }
 
     func stop() async {
+        lastError = nil
         removeDefaultDeviceListener()
         micTask?.cancel()
         sysTask?.cancel()
