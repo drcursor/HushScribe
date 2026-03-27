@@ -56,7 +56,7 @@ struct ContentView: View {
                         .truncationMode(.middle)
                     Spacer()
                     Button("Show in Finder") {
-                        NSWorkspace.shared.selectFile(url.path, inFileSystemAtPath: url.deletingLastPathComponent().path)
+                        NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: url.deletingLastPathComponent().path)
                         savedFileURL = nil
                     }
                     .font(.system(size: 11))

@@ -130,10 +130,13 @@ final class TranscriptionEngine {
                 }
             }
         )
-        micTask = Task.detached { [weak self] in
+        let reportMicError: @Sendable (String) -> Void = { [weak self] msg in
+            Task { @MainActor in self?.lastError = msg }
+        }
+        micTask = Task.detached {
             let hadFatalError = await micTranscriber.run(stream: micStream)
             if hadFatalError {
-                await MainActor.run { self?.lastError = "Mic transcription failed — restart session" }
+                reportMicError("Mic transcription failed — restart session")
             }
         }
 
@@ -154,10 +157,13 @@ final class TranscriptionEngine {
                     }
                 }
             )
-            sysTask = Task.detached { [weak self] in
+            let reportSysError: @Sendable (String) -> Void = { [weak self] msg in
+                Task { @MainActor in self?.lastError = msg }
+            }
+            sysTask = Task.detached {
                 let hadFatalError = await sysTranscriber.run(stream: sysStream)
                 if hadFatalError {
-                    await MainActor.run { self?.lastError = "System audio transcription failed — restart session" }
+                    reportSysError("System audio transcription failed — restart session")
                 }
             }
         }
@@ -211,10 +217,13 @@ final class TranscriptionEngine {
                 }
             }
         )
-        micTask = Task.detached { [weak self] in
+        let reportMicError: @Sendable (String) -> Void = { [weak self] msg in
+            Task { @MainActor in self?.lastError = msg }
+        }
+        micTask = Task.detached {
             let hadFatalError = await micTranscriber.run(stream: micStream)
             if hadFatalError {
-                await MainActor.run { self?.lastError = "Mic transcription failed — restart session" }
+                reportMicError("Mic transcription failed — restart session")
             }
         }
 

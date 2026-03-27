@@ -134,7 +134,7 @@ final class StreamingTranscriber: @unchecked Sendable {
         }
 
         if speechSamples.count > 8000 {
-            await transcribeSegment(speechSamples)
+            _ = await transcribeSegment(speechSamples)
         }
 
         return consecutiveErrors > 10
