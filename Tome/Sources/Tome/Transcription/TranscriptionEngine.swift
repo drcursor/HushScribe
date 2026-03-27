@@ -279,7 +279,7 @@ final class TranscriptionEngine {
         }
     }
 
-    func stop() {
+    func stop() async {
         removeDefaultDeviceListener()
         micTask?.cancel()
         sysTask?.cancel()
@@ -287,7 +287,7 @@ final class TranscriptionEngine {
         micTask = nil
         sysTask = nil
         micKeepAliveTask = nil
-        Task { await systemCapture.stop() }
+        await systemCapture.stop()
         micCapture.stop()
         currentMicDeviceID = 0
         isRunning = false

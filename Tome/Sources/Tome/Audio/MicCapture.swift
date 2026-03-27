@@ -78,12 +78,6 @@ final class MicCapture: @unchecked Sendable {
 
             diagLog("[MIC-5] tap installed, preparing engine...")
 
-            continuation.onTermination = { [engine] _ in
-                diagLog("[MIC-TERM] stream terminated, stopping engine")
-                engine.inputNode.removeTap(onBus: 0)
-                engine.stop()
-            }
-
             do {
                 self.engine.prepare()
                 diagLog("[MIC-7] engine prepared, starting...")

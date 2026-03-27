@@ -213,9 +213,12 @@ struct ContentView: View {
 
     private func stopSession() {
         let wasCallCapture = activeSessionType == .callCapture
+        activeSessionType = nil
+        detectedAppName = nil
+        silenceSeconds = 0
 
-        transcriptionEngine?.stop()
         Task {
+            await transcriptionEngine?.stop()
             await sessionStore.endSession()
             await transcriptLogger.endSession()
 
@@ -229,9 +232,6 @@ struct ContentView: View {
             // Finalize frontmatter AFTER diarization (duration, speakers, rename)
             await transcriptLogger.finalizeFrontmatter()
         }
-        activeSessionType = nil
-        detectedAppName = nil
-        silenceSeconds = 0
     }
 
     private func handleNewUtterance() {
