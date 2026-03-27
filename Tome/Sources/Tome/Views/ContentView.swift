@@ -262,9 +262,12 @@ struct ContentView: View {
 
             // Finalize frontmatter AFTER diarization (duration, speakers, rename)
             let savedPath = await transcriptLogger.finalizeFrontmatter()
+            print("[TOME-DEBUG] finalizeFrontmatter returned: \(String(describing: savedPath))")
+            print("[TOME-DEBUG] activeSessionType: \(String(describing: activeSessionType))")
 
             // Only show banner if not already in a new session
             if activeSessionType == nil, let savedPath {
+                print("[TOME-DEBUG] Showing save banner for: \(savedPath.lastPathComponent)")
                 savedFileURL = savedPath
                 bannerDismissTask?.cancel()
                 bannerDismissTask = Task {
