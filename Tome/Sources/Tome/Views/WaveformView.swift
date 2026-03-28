@@ -58,7 +58,7 @@ private struct SpectrumVisualizer: View {
         .padding(.horizontal, 12)
         .drawingGroup()
         .shadow(color: Color.accent1.opacity(glowLevel * 0.6), radius: glowLevel * 8)
-        .shadow(color: Color.accent1.opacity(glowLevel > 0.7 ? (glowLevel - 0.7) * 2 : 0), radius: 16)
+        .shadow(color: Color.accent1.opacity(glowLevel > 0.7 ? (glowLevel - 0.7) * CGFloat(2) : 0), radius: 16)
         .onAppear {
             barOffsets = (0..<barCount).map { _ in Float.random(in: -0.15...0.15) }
         }
