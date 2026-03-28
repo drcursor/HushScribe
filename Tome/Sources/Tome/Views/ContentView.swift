@@ -56,7 +56,7 @@ struct ContentView: View {
             }
 
             // Waveform ribbon
-            WaveformView(isRecording: isRunning)
+            WaveformView(isRecording: isRunning, audioLevel: audioLevel)
 
             // Glass control bar
             ControlBar(
