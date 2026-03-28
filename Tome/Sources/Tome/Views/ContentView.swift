@@ -30,49 +30,41 @@ struct ContentView: View {
     @State private var silenceSeconds: Int = 0
     @State private var savedFileURL: URL?
     @State private var bannerDismissTask: Task<Void, Never>?
+    @State private var sessionElapsed: Int = 0
 
     var body: some View {
         VStack(spacing: 0) {
-            // Compact header
+            // Glass top bar
             topBar
 
-            Divider()
-
-            // Transcript view (primary content)
-            TranscriptView(
-                utterances: transcriptStore.utterances,
-                volatileYouText: transcriptStore.volatileYouText,
-                volatileThemText: transcriptStore.volatileThemText
-            )
-
-            Divider()
-
-            if let url = savedFileURL, activeSessionType == nil {
-                HStack {
-                    Text("Saved to \(url.lastPathComponent)")
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.fg2)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Spacer()
-                    Button("Show in Finder") {
-                        NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: url.deletingLastPathComponent().path)
-                        savedFileURL = nil
-                    }
-                    .font(.system(size: 11))
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color.accent1)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
+            // Main content area
+            if !isRunning && transcriptStore.utterances.isEmpty
+                && transcriptStore.volatileYouText.isEmpty
+                && transcriptStore.volatileThemText.isEmpty {
+                emptyState
+            } else {
+                TranscriptView(
+                    utterances: transcriptStore.utterances,
+                    volatileYouText: transcriptStore.volatileYouText,
+                    volatileThemText: transcriptStore.volatileThemText
+                )
             }
 
-            // Bottom bar: capture buttons + controls
+            // Save banner
+            if let url = savedFileURL, activeSessionType == nil {
+                saveBanner(url: url)
+            }
+
+            // Waveform ribbon
+            WaveformView(isRecording: isRunning)
+
+            // Glass control bar
             ControlBar(
                 isRecording: isRunning,
                 activeSessionType: activeSessionType,
                 audioLevel: audioLevel,
                 detectedApp: detectedAppName,
+                silenceSeconds: silenceSeconds,
                 statusMessage: transcriptionEngine?.assetStatus,
                 errorMessage: transcriptionEngine?.lastError,
                 onStartCallCapture: { startSession(type: .callCapture) },
@@ -102,7 +94,7 @@ struct ContentView: View {
                 transcriptionEngine = TranscriptionEngine(transcriptStore: transcriptStore)
             }
         }
-        // Audio level polling (replaces 0.1s Timer.publish)
+        // Audio level polling
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(100))
@@ -120,7 +112,7 @@ struct ContentView: View {
                 }
             }
         }
-        // Silence auto-stop (replaces 1.0s Timer.publish)
+        // Silence auto-stop + elapsed timer
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
@@ -128,6 +120,7 @@ struct ContentView: View {
                     silenceSeconds = 0
                     continue
                 }
+                sessionElapsed += 1
                 if audioLevel < 0.01 {
                     silenceSeconds += 1
                     if silenceSeconds >= 120 {
@@ -158,24 +151,102 @@ struct ContentView: View {
     private var topBar: some View {
         HStack(spacing: 0) {
             Text("TOME")
-                .font(.system(size: 20, weight: .bold))
-                .tracking(8)
+                .font(.system(size: 14, weight: .heavy))
+                .tracking(3)
                 .foregroundStyle(Color.fg1)
 
             Spacer()
 
-            if isRunning {
-                Circle()
-                    .fill(.red)
-                    .frame(width: 6, height: 6)
+            HStack(spacing: 10) {
+                Text(topBarStatus)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(isRunning ? Color.fg1 : Color.fg2)
+
+                if isRunning {
+                    PulsingDot(size: 6)
+                } else {
+                    Circle()
+                        .fill(Color.fg2)
+                        .frame(width: 6, height: 6)
+                        .opacity(0.5)
+                }
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .frame(height: 44)
+        .background(Color.bg1.opacity(0.45))
+        .overlay(Divider(), alignment: .bottom)
     }
+
+    private var topBarStatus: String {
+        if isRunning {
+            return formatTime(sessionElapsed)
+        } else if savedFileURL != nil {
+            return "\(formatTime(sessionElapsed)) · Done"
+        } else {
+            return "Ready"
+        }
+    }
+
+    // MARK: - Empty State
+
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "waveform.circle")
+                .font(.system(size: 28))
+                .foregroundStyle(Color.fg3)
+            Text("No active session")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(Color.fg2)
+            Text("Start a call capture or voice memo\nto begin transcribing.")
+                .font(.system(size: 11))
+                .foregroundStyle(Color.fg3)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Save Banner
+
+    private func saveBanner(url: URL) -> some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(Color.accent1.opacity(0.15))
+                .frame(width: 16, height: 16)
+                .overlay(
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(Color.accent1)
+                )
+            Text("Saved to \(url.lastPathComponent)")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Color.fg1)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer()
+            Button("Show in Finder") {
+                NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: url.deletingLastPathComponent().path)
+                savedFileURL = nil
+            }
+            .font(.system(size: 11))
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.accent1)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.bg1.opacity(0.7))
+        .overlay(Divider(), alignment: .top)
+        .overlay(Divider(), alignment: .bottom)
+    }
+
+    // MARK: - Helpers
 
     private var isRunning: Bool {
         transcriptionEngine?.isRunning ?? false
+    }
+
+    private func formatTime(_ s: Int) -> String {
+        "\(s / 60):\(String(format: "%02d", s % 60))"
     }
 
     // MARK: - Actions
@@ -183,6 +254,7 @@ struct ContentView: View {
     private func startSession(type: SessionType) {
         transcriptStore.clear()
         silenceSeconds = 0
+        sessionElapsed = 0
         savedFileURL = nil
         bannerDismissTask?.cancel()
 
@@ -195,7 +267,6 @@ struct ContentView: View {
         switch type {
         case .callCapture:
             outputPath = settings.vaultMeetingsPath
-            // Detect frontmost conferencing app for per-app audio filtering
             if let frontApp = NSWorkspace.shared.frontmostApplication,
                let bundleID = frontApp.bundleIdentifier,
                let appName = conferencingBundleIDs[bundleID] {
@@ -233,7 +304,6 @@ struct ContentView: View {
                     appBundleID: appBundleID
                 )
             } else {
-                // Voice memo — mic only, no system audio
                 await transcriptionEngine?.start(
                     locale: settings.locale,
                     inputDeviceID: settings.inputDeviceID
@@ -253,21 +323,19 @@ struct ContentView: View {
             await sessionStore.endSession()
             await transcriptLogger.endSession()
 
-            // Run post-session diarization only for call captures
             if wasCallCapture {
+                transcriptionEngine?.assetStatus = "Identifying speakers..."
                 if let segments = await transcriptionEngine?.runPostSessionDiarization() {
+                    transcriptionEngine?.assetStatus = "Rewriting transcript..."
                     await transcriptLogger.rewriteWithDiarization(segments: segments)
                 }
             }
 
-            // Finalize frontmatter AFTER diarization (duration, speakers, rename)
+            transcriptionEngine?.assetStatus = "Finalizing..."
             let savedPath = await transcriptLogger.finalizeFrontmatter()
-            print("[TOME-DEBUG] finalizeFrontmatter returned: \(String(describing: savedPath))")
-            print("[TOME-DEBUG] activeSessionType: \(String(describing: activeSessionType))")
+            transcriptionEngine?.assetStatus = "Ready"
 
-            // Only show banner if not already in a new session
             if activeSessionType == nil, let savedPath {
-                print("[TOME-DEBUG] Showing save banner for: \(savedPath.lastPathComponent)")
                 savedFileURL = savedPath
                 bannerDismissTask?.cancel()
                 bannerDismissTask = Task {
@@ -281,10 +349,8 @@ struct ContentView: View {
     private func handleNewUtterance() {
         guard let last = transcriptStore.utterances.last else { return }
 
-        // Reset silence timer on any speech
         silenceSeconds = 0
 
-        // Persist to transcript log
         let speakerName = last.speaker == .you ? "You" : "Them"
         Task {
             await transcriptLogger.append(
@@ -294,7 +360,6 @@ struct ContentView: View {
             )
         }
 
-        // Log session record
         Task {
             await sessionStore.appendRecord(SessionRecord(
                 speaker: last.speaker,
