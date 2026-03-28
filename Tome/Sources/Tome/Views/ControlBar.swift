@@ -5,10 +5,10 @@ struct PulsingDot: View {
     @State private var pulse = false
     var body: some View {
         Circle()
-            .fill(.red)
+            .fill(Color.recordRed)
             .frame(width: size, height: size)
             .opacity(pulse ? 1.0 : 0.4)
-            .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pulse)
+            .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: pulse)
             .onAppear { pulse = true }
     }
 }
@@ -30,7 +30,7 @@ struct ControlBar: View {
             if let error = errorMessage {
                 Text(error)
                     .font(.system(size: 10))
-                    .foregroundStyle(.red)
+                    .foregroundStyle(Color.recordRed)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 4)
@@ -53,22 +53,25 @@ struct ControlBar: View {
             if isRecording {
                 Button(action: onStop) {
                     HStack(spacing: 10) {
-                        PulsingDot()
+                        PulsingDot(size: 6)
 
-                        Text(activeSessionLabel)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color.fg1)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Stop Recording")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(Color.fg1)
+                            Text(activeSessionLabel)
+                                .font(.system(size: 10))
+                                .foregroundStyle(Color.fg2)
+                        }
 
                         Spacer()
-
-                        AudioLevelView(level: audioLevel)
-                            .frame(width: 50, height: 16)
                     }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 12)
                     .frame(maxWidth: .infinity)
-                    .background(Color.bg2)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .background(Color.accent1.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.accent1.opacity(0.12)))
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(".", modifiers: .command)
@@ -86,41 +89,47 @@ struct ControlBar: View {
             } else {
                 HStack(spacing: 10) {
                     Button(action: onStartCallCapture) {
-                        VStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             Image(systemName: "phone.fill")
-                                .font(.system(size: 20))
-                                .foregroundStyle(Color.accent1)
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.fg1)
                             Text("Call Capture")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(Color.fg2)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.fg1)
                             Text("⌘R")
-                                .font(.system(size: 9))
+                                .font(.system(size: 10))
                                 .foregroundStyle(Color.fg3)
                         }
+                        .lineLimit(1)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 18)
-                        .background(Color.bg1)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 8)
+                        .background(Color.bg1.opacity(0.7))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06)))
                     }
                     .buttonStyle(.plain)
                     .keyboardShortcut("r", modifiers: .command)
 
                     Button(action: onStartVoiceMemo) {
-                        VStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             Image(systemName: "mic.fill")
-                                .font(.system(size: 20))
-                                .foregroundStyle(Color.accent1)
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.fg1)
                             Text("Voice Memo")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(Color.fg2)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.fg1)
                             Text("⌘⇧R")
-                                .font(.system(size: 9))
+                                .font(.system(size: 10))
                                 .foregroundStyle(Color.fg3)
                         }
+                        .lineLimit(1)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 18)
-                        .background(Color.bg1)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 8)
+                        .background(Color.bg1.opacity(0.7))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06)))
                     }
                     .buttonStyle(.plain)
                     .keyboardShortcut("r", modifiers: [.command, .shift])
@@ -129,35 +138,21 @@ struct ControlBar: View {
                 .padding(.vertical, 10)
             }
         }
+        .background(Color.bg1.opacity(0.45))
+        .overlay(Divider(), alignment: .top)
     }
 
     private var activeSessionLabel: String {
         switch activeSessionType {
         case .callCapture:
             if let app = detectedApp {
-                return "Recording — \(app)"
+                return "Call Capture · \(app)"
             }
-            return "Recording Call"
+            return "Call Capture"
         case .voiceMemo:
-            return "Recording Memo"
+            return "Voice Memo"
         case nil:
             return "Recording"
         }
-    }
-}
-
-struct AudioLevelView: View {
-    let level: Float
-
-    var body: some View {
-        HStack(spacing: 2) {
-            ForEach(0..<6, id: \.self) { i in
-                let threshold = Float(i) / 6.0
-                RoundedRectangle(cornerRadius: 1)
-                    .fill(level > threshold ? Color.accent1.opacity(0.8) : Color.fg3.opacity(0.2))
-                    .frame(width: 3)
-            }
-        }
-        .animation(.easeOut(duration: 0.08), value: level)
     }
 }
