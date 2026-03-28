@@ -5,5 +5,16 @@
     <link>https://raw.githubusercontent.com/Gremble-io/Tome/gh-pages/appcast.xml</link>
     <description>Most recent updates to Tome</description>
     <language>en</language>
+    <item>
+      <title>Version 1.0.1</title>
+      <pubDate>Sat, 28 Mar 2026 07:39:01 +0000</pubDate>
+      <sparkle:version>1.0.1</sparkle:version>
+      <sparkle:shortVersionString>1.0.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/Gremble-io/Tome/releases/download/v1.0.1/Tome.dmg"
+       sparkle:edSignature="ewpQ+2dRLQbpkryV9/cE7RxP070D+VkHkYYdLhBRL2tDDV8UlHAQ15DsBRCKSWPV+WIlfdwjl45wUzJW5hWfDg=="
+       length="5877631"
+       type="application/octet-stream" />
+    </item>
   </channel>
 </rss>
