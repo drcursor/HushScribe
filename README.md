@@ -19,7 +19,6 @@ Tome is a macOS app that captures meetings and voice memos, transcribes them loc
   <img src="https://raw.githubusercontent.com/Gremble-io/Tome/main/assets/screenshot-idle.png" width="350" alt="Tome — idle state" />
   <img src="https://raw.githubusercontent.com/Gremble-io/Tome/main/assets/screenshot-recording.png" width="350" alt="Tome — recording with spectrum visualizer" />
 </p>
-</p>
 
 ## Background
 
