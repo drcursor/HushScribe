@@ -22,15 +22,13 @@ Tome is a macOS app that captures meetings and voice memos, transcribes them loc
 
 ## Background
 
-I'm not a developer. I'm a consultant who fell down the Obsidian rabbit hole. I built out a vault as a second brain: structured notes with YAML frontmatter, backlinks, tags, and a Claude agent layer that processes everything for me. Client files, meeting notes, action items, daily briefs, all flowing through the vault automatically.
+I'm a consultant who fell down the Obsidian rabbit hole. I built out a vault as a second brain: structured notes with YAML frontmatter, backlinks, tags, and a Claude agent layer that processes everything. Client files, meeting notes, action items, daily briefs, all flowing through the vault automatically.
 
-The problem was capture. I'm on calls all day and I just don't take notes. I needed something that would listen, transcribe, and drop structured markdown into the vault where my agent could pick it up and do the rest. Pull out action items, update client files, connect the dots.
+The problem was capture. I'm on calls all day and I don't take notes. I needed something that would listen, transcribe, and drop structured markdown into the vault where my agent could pick it up and do the rest. Pull out action items, update client files, connect the dots.
 
-I looked at Otter, Granola, Fireflies. They all lock your data in their cloud, their format, their walled garden. None of them output plain markdown. None of them are built to feed into an agent workflow. I just wanted something built for my exact use case.
+I looked at Otter, Granola, Fireflies. They all lock your data in their cloud, their format, their walled garden. None of them output plain markdown. None of them are built to feed into an agent workflow.
 
-With frontier models you can actually do that now. I started from [OpenGranola](https://github.com/yazinsai/OpenGranola), learned Swift along the way, and with Claude's help rewrote most of it: different audio pipeline, local ASR, speaker diarization, vault-native output. First thing I've ever built. Took about two weeks.
-
-I'm putting it out there because if you're running Obsidian with any kind of AI agent setup, you probably have the same gap. No promises on updates or a roadmap. I built this for myself and it works. If it's useful to you, cool.
+I started from [OpenGranola](https://github.com/yazinsai/OpenGranola), learned Swift along the way, and rebuilt it with a different audio pipeline, local ASR, speaker diarization, and vault-native output. If you're running Obsidian with any kind of AI agent setup, you probably have the same gap.
 
 ## Why Tome?
 

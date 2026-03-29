@@ -12,9 +12,5 @@ build/
 *.swp
 *~
 
-# Dev config
-CLAUDE.md
-AGENTS.md
-
 # Misc
 *.spec
