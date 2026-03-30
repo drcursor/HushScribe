@@ -19,12 +19,19 @@ func diagLog(_ msg: String) {
     #endif
 }
 
+enum ModelDownloadState {
+    case needed
+    case downloading
+    case ready
+}
+
 /// Dual-stream mic + system audio transcription.
 @Observable
 @MainActor
 final class TranscriptionEngine {
     private(set) var isRunning = false
     private(set) var isPaused = false
+    private(set) var modelDownloadState: ModelDownloadState
     var assetStatus: String = "Ready"
     var lastError: String?
 
@@ -55,6 +62,35 @@ final class TranscriptionEngine {
 
     init(transcriptStore: TranscriptStore) {
         self.transcriptStore = transcriptStore
+        self.modelDownloadState = UserDefaults.standard.bool(forKey: "modelsDownloaded") ? .ready : .needed
+    }
+
+    /// Download and cache models without starting a recording session.
+    func downloadModels() async {
+        guard modelDownloadState != .ready else { return }
+        modelDownloadState = .downloading
+        assetStatus = "Downloading multilingual model..."
+        diagLog("[ENGINE] downloading models on demand...")
+        do {
+            let models = try await AsrModels.downloadAndLoad(version: .v3)
+            assetStatus = "Initializing ASR..."
+            let asr = AsrManager(config: .default)
+            try await asr.loadModels(models)
+            self.asrManager = asr
+            assetStatus = "Loading VAD model..."
+            let vad = try await VadManager()
+            self.vadManager = vad
+            modelDownloadState = .ready
+            assetStatus = "Ready"
+            UserDefaults.standard.set(true, forKey: "modelsDownloaded")
+            diagLog("[ENGINE] models downloaded and cached")
+        } catch {
+            let msg = "Failed to download models: \(error.localizedDescription)"
+            diagLog("[ENGINE] \(msg)")
+            lastError = msg
+            modelDownloadState = .needed
+            assetStatus = "Ready"
+        }
     }
 
     func start(locale: Locale, inputDeviceID: AudioDeviceID = 0, appBundleID: String? = nil) async {
@@ -66,30 +102,33 @@ final class TranscriptionEngine {
 
         isRunning = true
 
-        // 1. Load FluidAudio models
-        assetStatus = "Downloading multilingual model (first run)..."
-        diagLog("[ENGINE-1] loading FluidAudio ASR models...")
-        do {
-            let models = try await AsrModels.downloadAndLoad(version: .v3)
-            assetStatus = "Initializing ASR..."
-            let asr = AsrManager(config: .default)
-            try await asr.loadModels(models)
-            self.asrManager = asr
+        // 1. Load FluidAudio models (skip if already loaded via downloadModels())
+        if asrManager == nil || vadManager == nil {
+            assetStatus = "Downloading multilingual model (first run)..."
+            diagLog("[ENGINE-1] loading FluidAudio ASR models...")
+            do {
+                let models = try await AsrModels.downloadAndLoad(version: .v3)
+                assetStatus = "Initializing ASR..."
+                let asr = AsrManager(config: .default)
+                try await asr.loadModels(models)
+                self.asrManager = asr
 
-            assetStatus = "Loading VAD model..."
-            diagLog("[ENGINE-1b] loading VAD model...")
-            let vad = try await VadManager()
-            self.vadManager = vad
+                assetStatus = "Loading VAD model..."
+                diagLog("[ENGINE-1b] loading VAD model...")
+                let vad = try await VadManager()
+                self.vadManager = vad
 
-            assetStatus = "Models ready"
-            diagLog("[ENGINE-2] FluidAudio models loaded")
-        } catch {
-            let msg = "Failed to load models: \(error.localizedDescription)"
-            diagLog("[ENGINE-2-FAIL] \(msg)")
-            lastError = msg
-            assetStatus = "Ready"
-            isRunning = false
-            return
+                assetStatus = "Models ready"
+                UserDefaults.standard.set(true, forKey: "modelsDownloaded")
+                diagLog("[ENGINE-2] FluidAudio models loaded")
+            } catch {
+                let msg = "Failed to load models: \(error.localizedDescription)"
+                diagLog("[ENGINE-2-FAIL] \(msg)")
+                lastError = msg
+                assetStatus = "Ready"
+                isRunning = false
+                return
+            }
         }
 
         guard let asrManager, let vadManager else { return }
