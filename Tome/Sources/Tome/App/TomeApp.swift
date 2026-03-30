@@ -7,6 +7,7 @@ struct TomeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var settings = AppSettings()
     private let updaterController = AppUpdaterController()
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     var body: some Scene {
         WindowGroup {
@@ -16,7 +17,7 @@ struct TomeApp: App {
                 }
         }
         .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 320, height: 560)
+        .defaultSize(width: 320, height: hasCompletedOnboarding ? 560 : 380)
         .commands {
             CommandGroup(after: .appInfo) {
                 CheckForUpdatesView(updater: updaterController.updater)
