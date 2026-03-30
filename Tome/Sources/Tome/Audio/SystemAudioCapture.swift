@@ -8,6 +8,7 @@ final class SystemAudioCapture: NSObject, @unchecked Sendable, SCStreamDelegate,
     private let _sysContinuation = OSAllocatedUnfairLock<AsyncStream<AVAudioPCMBuffer>.Continuation?>(uncheckedState: nil)
     private let _micContinuation = OSAllocatedUnfairLock<AsyncStream<AVAudioPCMBuffer>.Continuation?>(uncheckedState: nil)
     private let _audioLevel = AudioLevel()
+    private let _paused = OSAllocatedUnfairLock<Bool>(uncheckedState: false)
 
     var audioLevel: Float { _audioLevel.value }
 
@@ -71,6 +72,15 @@ final class SystemAudioCapture: NSObject, @unchecked Sendable, SCStreamDelegate,
         return CaptureStreams(systemAudio: sysStream)
     }
 
+    func pause() {
+        _paused.withLock { $0 = true }
+        _audioLevel.value = 0
+    }
+
+    func resume() {
+        _paused.withLock { $0 = false }
+    }
+
     func stop() async {
         try? await _stream.withLock { $0 }?.stopCapture()
         _stream.withLock { $0 = nil }
@@ -93,6 +103,7 @@ final class SystemAudioCapture: NSObject, @unchecked Sendable, SCStreamDelegate,
 
     nonisolated func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
         guard type == .audio else { return }
+        guard !_paused.withLock({ $0 }) else { return }
         guard let formatDesc = sampleBuffer.formatDescription,
               var asbd = formatDesc.audioStreamBasicDescription else { return }
 
