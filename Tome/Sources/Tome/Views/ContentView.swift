@@ -41,7 +41,11 @@ struct ContentView: View {
             if !isRunning && transcriptStore.utterances.isEmpty
                 && transcriptStore.volatileYouText.isEmpty
                 && transcriptStore.volatileThemText.isEmpty {
-                emptyState
+                if transcriptionEngine?.modelDownloadState != .ready {
+                    modelDownloadState
+                } else {
+                    emptyState
+                }
             } else {
                 TranscriptView(
                     utterances: transcriptStore.utterances,
@@ -186,6 +190,52 @@ struct ContentView: View {
         } else {
             return "Ready"
         }
+    }
+
+    // MARK: - Model Download State
+
+    private var modelDownloadState: some View {
+        VStack(spacing: 12) {
+            if transcriptionEngine?.modelDownloadState == .downloading {
+                ProgressView()
+                    .controlSize(.large)
+                    .tint(Color.accent1)
+                Text(transcriptionEngine?.assetStatus ?? "Downloading...")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.fg2)
+                    .multilineTextAlignment(.center)
+            } else {
+                Image(systemName: "arrow.down.circle")
+                    .font(.system(size: 28))
+                    .foregroundStyle(Color.fg3)
+                Text("Transcription model required")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.fg2)
+                Text("Download the on-device model (~600 MB)\nto start transcribing.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.fg3)
+                    .multilineTextAlignment(.center)
+                Button("Download Model") {
+                    Task { await transcriptionEngine?.downloadModels() }
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.accent1)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.accent1.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                if let error = transcriptionEngine?.lastError {
+                    Text(error)
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.recordRed)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
     }
 
     // MARK: - Empty State
