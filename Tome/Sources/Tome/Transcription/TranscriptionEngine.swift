@@ -62,7 +62,8 @@ final class TranscriptionEngine {
 
     init(transcriptStore: TranscriptStore) {
         self.transcriptStore = transcriptStore
-        self.modelDownloadState = UserDefaults.standard.bool(forKey: "modelsDownloaded") ? .ready : .needed
+        let cacheDir = AsrModels.defaultCacheDirectory(for: .v3)
+        self.modelDownloadState = AsrModels.modelsExist(at: cacheDir, version: .v3) ? .ready : .needed
     }
 
     /// Download and cache models without starting a recording session.
@@ -82,7 +83,6 @@ final class TranscriptionEngine {
             self.vadManager = vad
             modelDownloadState = .ready
             assetStatus = "Ready"
-            UserDefaults.standard.set(true, forKey: "modelsDownloaded")
             diagLog("[ENGINE] models downloaded and cached")
         } catch {
             let msg = "Failed to download models: \(error.localizedDescription)"
@@ -119,7 +119,6 @@ final class TranscriptionEngine {
                 self.vadManager = vad
 
                 assetStatus = "Models ready"
-                UserDefaults.standard.set(true, forKey: "modelsDownloaded")
                 diagLog("[ENGINE-2] FluidAudio models loaded")
             } catch {
                 let msg = "Failed to load models: \(error.localizedDescription)"
