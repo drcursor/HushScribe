@@ -18,6 +18,7 @@ private let conferencingBundleIDs: [String: String] = [
 
 struct ContentView: View {
     @Bindable var settings: AppSettings
+    var recordingState: RecordingState
     @State private var transcriptStore = TranscriptStore()
     @State private var transcriptionEngine: TranscriptionEngine?
     @State private var sessionStore = SessionStore()
@@ -135,6 +136,24 @@ struct ContentView: View {
                 try? await Task.sleep(for: .seconds(10))
                 await transcriptLogger.flushIfNeeded()
             }
+        }
+        // Menu bar action notifications
+        .onReceive(NotificationCenter.default.publisher(for: .tomeStartCallCapture)) { _ in
+            startSession(type: .callCapture)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .tomeStartVoiceMemo)) { _ in
+            startSession(type: .voiceMemo)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .tomeStopRecording)) { _ in
+            stopSession()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .tomePauseRecording)) { _ in
+            transcriptionEngine?.pause()
+            recordingState.isPaused = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .tomeResumeRecording)) { _ in
+            transcriptionEngine?.resume()
+            recordingState.isPaused = false
         }
         .onChange(of: settings.inputDeviceID) {
             if isRunning {
@@ -297,6 +316,8 @@ struct ContentView: View {
             }
             activeSessionType = type
             detectedAppName = resolvedAppName
+            recordingState.isRecording = true
+            recordingState.isPaused = false
             if type == .callCapture {
                 await transcriptionEngine?.start(
                     locale: settings.locale,
@@ -317,6 +338,8 @@ struct ContentView: View {
         activeSessionType = nil
         detectedAppName = nil
         silenceSeconds = 0
+        recordingState.isRecording = false
+        recordingState.isPaused = false
 
         Task {
             await transcriptionEngine?.stop()
