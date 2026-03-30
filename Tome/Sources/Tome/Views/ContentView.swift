@@ -76,8 +76,8 @@ struct ContentView: View {
                 onStartCallCapture: { startSession(type: .callCapture) },
                 onStartVoiceMemo: { startSession(type: .voiceMemo) },
                 onStop: stopSession,
-                onPause: { transcriptionEngine?.pause() },
-                onResume: { transcriptionEngine?.resume() }
+                onPause: pauseFromMenu,
+                onResume: resumeFromMenu
             )
         }
         .frame(minWidth: 280, maxWidth: 360, minHeight: 400)
