@@ -184,6 +184,12 @@ struct ContentView: View {
         } else if savedFileURL != nil {
             return "\(formatTime(sessionElapsed)) · Done"
         } else {
+            let deviceID = settings.inputDeviceID == 0
+                ? (MicCapture.defaultInputDeviceID() ?? 0)
+                : settings.inputDeviceID
+            if deviceID != 0, let name = MicCapture.deviceName(for: deviceID) {
+                return "Ready · \(name)"
+            }
             return "Ready"
         }
     }
