@@ -81,7 +81,7 @@ struct ContentView: View {
                 onResume: resumeFromMenu
             )
         }
-        .frame(width: 320, minHeight: 400)
+        .frame(minWidth: 320, maxWidth: 320, minHeight: 400)
         .background(Color.bg0)
         .preferredColorScheme(.dark)
         .overlay {
