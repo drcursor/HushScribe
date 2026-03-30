@@ -76,7 +76,21 @@ final class TranscriptionEngine {
         // Step 1: Download files to disk. This is the only step that determines
         // whether models are "downloaded" — in-memory loading is a separate concern.
         do {
-            try await AsrModels.download(version: .v3)
+            try await AsrModels.download(version: .v3, progressHandler: { [weak self] progress in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    switch progress.phase {
+                    case .listing:
+                        self.assetStatus = "Listing model files..."
+                    case .downloading:
+                        // fractionCompleted spans 0→0.5 during the download phase
+                        let pct = min(100, Int(progress.fractionCompleted * 200))
+                        self.assetStatus = "Downloading model... \(pct)%"
+                    case .compiling(let name):
+                        self.assetStatus = name.isEmpty ? "Compiling models..." : "Compiling \(name)..."
+                    }
+                }
+            })
         } catch {
             let msg = "Failed to download models: \(error.localizedDescription)"
             diagLog("[ENGINE] \(msg)")

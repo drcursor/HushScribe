@@ -72,7 +72,7 @@ struct ContentView: View {
                 audioLevel: audioLevel,
                 detectedApp: detectedAppName,
                 silenceSeconds: silenceSeconds,
-                statusMessage: transcriptionEngine?.assetStatus,
+                statusMessage: transcriptionEngine?.modelDownloadState == .downloading ? nil : transcriptionEngine?.assetStatus,
                 errorMessage: transcriptionEngine?.lastError,
                 onStartCallCapture: { startSession(type: .callCapture) },
                 onStartVoiceMemo: { startSession(type: .voiceMemo) },
