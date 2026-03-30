@@ -102,13 +102,39 @@ final class TranscriptionEngine {
 
         isRunning = true
 
-        // Models must be pre-downloaded via downloadModels() before starting.
-        guard let asrManager, let vadManager else {
-            lastError = "Models not loaded. Please download the model first."
-            assetStatus = "Ready"
-            isRunning = false
-            return
+        // Load models into memory if not already loaded (e.g. models were on disk from a prior run).
+        if asrManager == nil || vadManager == nil {
+            guard modelDownloadState == .ready else {
+                lastError = "Models not downloaded. Please download the model first."
+                assetStatus = "Ready"
+                isRunning = false
+                return
+            }
+            assetStatus = "Loading models..."
+            diagLog("[ENGINE-1] loading FluidAudio ASR models from cache...")
+            do {
+                let models = try await AsrModels.downloadAndLoad(version: .v3)
+                assetStatus = "Initializing ASR..."
+                let asr = AsrManager(config: .default)
+                try await asr.loadModels(models)
+                self.asrManager = asr
+                assetStatus = "Loading VAD model..."
+                diagLog("[ENGINE-1b] loading VAD model...")
+                let vad = try await VadManager()
+                self.vadManager = vad
+                assetStatus = "Models ready"
+                diagLog("[ENGINE-2] FluidAudio models loaded from cache")
+            } catch {
+                let msg = "Failed to load models: \(error.localizedDescription)"
+                diagLog("[ENGINE-2-FAIL] \(msg)")
+                lastError = msg
+                assetStatus = "Ready"
+                isRunning = false
+                return
+            }
         }
+
+        guard let asrManager, let vadManager else { return }
 
         // 2. Start mic capture
         userSelectedDeviceID = inputDeviceID
