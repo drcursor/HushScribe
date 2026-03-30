@@ -156,12 +156,10 @@ struct ContentView: View {
             stopSession()
         }
         .onReceive(NotificationCenter.default.publisher(for: .tomePauseRecording)) { _ in
-            transcriptionEngine?.pause()
-            recordingState.isPaused = true
+            pauseFromMenu()
         }
         .onReceive(NotificationCenter.default.publisher(for: .tomeResumeRecording)) { _ in
-            transcriptionEngine?.resume()
-            recordingState.isPaused = false
+            resumeFromMenu()
         }
         .onChange(of: settings.inputDeviceID) {
             if isRunning {
@@ -390,6 +388,16 @@ struct ContentView: View {
                 )
             }
         }
+    }
+
+    private func pauseFromMenu() {
+        transcriptionEngine?.pause()
+        recordingState.isPaused = true
+    }
+
+    private func resumeFromMenu() {
+        transcriptionEngine?.resume()
+        recordingState.isPaused = false
     }
 
     private func stopSession() {
