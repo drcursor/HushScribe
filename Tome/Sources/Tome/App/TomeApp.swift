@@ -6,11 +6,12 @@ import Sparkle
 struct TomeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var settings = AppSettings()
+    @State private var recordingState = RecordingState()
     private let updaterController = AppUpdaterController()
 
     var body: some Scene {
         WindowGroup {
-            ContentView(settings: settings)
+            ContentView(settings: settings, recordingState: recordingState)
                 .onAppear {
                     settings.applyScreenShareVisibility()
                 }
@@ -28,6 +29,28 @@ struct TomeApp: App {
         MenuBarExtra {
             Text("Tome")
                 .font(.headline)
+            Divider()
+            if !recordingState.isRecording {
+                Button("Start Call Capture") {
+                    NotificationCenter.default.post(name: .tomeStartCallCapture, object: nil)
+                }
+                Button("Start Voice Memo") {
+                    NotificationCenter.default.post(name: .tomeStartVoiceMemo, object: nil)
+                }
+            } else {
+                if recordingState.isPaused {
+                    Button("Resume Recording") {
+                        NotificationCenter.default.post(name: .tomeResumeRecording, object: nil)
+                    }
+                } else {
+                    Button("Pause Recording") {
+                        NotificationCenter.default.post(name: .tomePauseRecording, object: nil)
+                    }
+                }
+                Button("Stop Recording") {
+                    NotificationCenter.default.post(name: .tomeStopRecording, object: nil)
+                }
+            }
             Divider()
             Button("Quit Tome") {
                 NSApplication.shared.terminate(nil)
