@@ -24,6 +24,7 @@ func diagLog(_ msg: String) {
 @MainActor
 final class TranscriptionEngine {
     private(set) var isRunning = false
+    private(set) var isPaused = false
     var assetStatus: String = "Ready"
     var lastError: String?
 
@@ -295,6 +296,29 @@ final class TranscriptionEngine {
             assetStatus = "Ready"
             return false
         }
+    }
+
+    func pause() {
+        guard isRunning, !isPaused else { return }
+        micCapture.pause()
+        systemCapture.pause()
+        isPaused = true
+        assetStatus = "Paused"
+        diagLog("[ENGINE] paused")
+    }
+
+    func resume() {
+        guard isRunning, isPaused else { return }
+        do {
+            try micCapture.resume()
+        } catch {
+            lastError = "Failed to resume mic: \(error.localizedDescription)"
+            diagLog("[ENGINE] resume mic failed: \(error)")
+        }
+        systemCapture.resume()
+        isPaused = false
+        assetStatus = "Transcribing (Parakeet-TDT v3)"
+        diagLog("[ENGINE] resumed")
     }
 
     func stop() async {

@@ -92,6 +92,15 @@ final class MicCapture: @unchecked Sendable {
         }
     }
 
+    func pause() {
+        engine.pause()
+        _audioLevel.value = 0
+    }
+
+    func resume() throws {
+        try engine.start()
+    }
+
     func stop() {
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
