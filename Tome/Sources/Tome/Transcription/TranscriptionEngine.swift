@@ -63,7 +63,16 @@ final class TranscriptionEngine {
     init(transcriptStore: TranscriptStore) {
         self.transcriptStore = transcriptStore
         let cacheDir = AsrModels.defaultCacheDirectory(for: .v3)
-        self.modelDownloadState = AsrModels.modelsExist(at: cacheDir, version: .v3) ? .ready : .needed
+        let exists = AsrModels.modelsExist(at: cacheDir, version: .v3)
+        diagLog("[ENGINE-INIT] cacheDir=\(cacheDir.path) modelsExist=\(exists)")
+        // Also log individual file presence for diagnosis
+        let fm = FileManager.default
+        let repoDir = cacheDir.deletingLastPathComponent().appendingPathComponent("parakeet-tdt-0.6b-v3")
+        for file in ["Preprocessor.mlmodelc", "Encoder.mlmodelc", "Decoder.mlmodelc", "JointDecision.mlmodelc", "parakeet_vocab.json"] {
+            let path = repoDir.appendingPathComponent(file).path
+            diagLog("[ENGINE-INIT]   \(file): \(fm.fileExists(atPath: path))")
+        }
+        self.modelDownloadState = exists ? .ready : .needed
     }
 
     /// Download and cache models without starting a recording session.
