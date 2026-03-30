@@ -72,8 +72,25 @@ final class TranscriptionEngine {
         modelDownloadState = .downloading
         assetStatus = "Downloading multilingual model..."
         diagLog("[ENGINE] downloading models on demand...")
+
+        // Step 1: Download files to disk. This is the only step that determines
+        // whether models are "downloaded" — in-memory loading is a separate concern.
         do {
-            let models = try await AsrModels.downloadAndLoad(version: .v3)
+            try await AsrModels.download(version: .v3)
+        } catch {
+            let msg = "Failed to download models: \(error.localizedDescription)"
+            diagLog("[ENGINE] \(msg)")
+            lastError = msg
+            modelDownloadState = .needed
+            assetStatus = "Ready"
+            return
+        }
+
+        // Step 2: Load into memory so the user can start recording immediately.
+        // If this fails, files are already on disk — mark ready and let start() retry.
+        diagLog("[ENGINE] models downloaded; loading into memory...")
+        do {
+            let models = try await AsrModels.loadFromCache(version: .v3)
             assetStatus = "Initializing ASR..."
             let asr = AsrManager(config: .default)
             try await asr.loadModels(models)
@@ -81,16 +98,15 @@ final class TranscriptionEngine {
             assetStatus = "Loading VAD model..."
             let vad = try await VadManager()
             self.vadManager = vad
-            modelDownloadState = .ready
-            assetStatus = "Ready"
-            diagLog("[ENGINE] models downloaded and cached")
+            diagLog("[ENGINE] models loaded into memory")
         } catch {
-            let msg = "Failed to download models: \(error.localizedDescription)"
-            diagLog("[ENGINE] \(msg)")
-            lastError = msg
-            modelDownloadState = .needed
-            assetStatus = "Ready"
+            diagLog("[ENGINE] in-memory load failed after download: \(error.localizedDescription)")
+            // Don't surface as a hard error — files are on disk; start() will load them.
         }
+
+        modelDownloadState = .ready
+        assetStatus = "Ready"
+        diagLog("[ENGINE] models downloaded and cached")
     }
 
     func start(locale: Locale, inputDeviceID: AudioDeviceID = 0, appBundleID: String? = nil) async {
