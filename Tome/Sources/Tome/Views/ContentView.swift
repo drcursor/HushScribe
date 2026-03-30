@@ -179,18 +179,17 @@ struct ContentView: View {
     }
 
     private var topBarStatus: String {
+        let deviceID = settings.inputDeviceID == 0
+            ? (MicCapture.defaultInputDeviceID() ?? 0)
+            : settings.inputDeviceID
+        let deviceSuffix = deviceID != 0 ? MicCapture.deviceName(for: deviceID).map { " · \($0)" } ?? "" : ""
+
         if isRunning {
-            return formatTime(sessionElapsed)
+            return "\(formatTime(sessionElapsed))\(deviceSuffix)"
         } else if savedFileURL != nil {
             return "\(formatTime(sessionElapsed)) · Done"
         } else {
-            let deviceID = settings.inputDeviceID == 0
-                ? (MicCapture.defaultInputDeviceID() ?? 0)
-                : settings.inputDeviceID
-            if deviceID != 0, let name = MicCapture.deviceName(for: deviceID) {
-                return "Ready · \(name)"
-            }
-            return "Ready"
+            return "Ready\(deviceSuffix)"
         }
     }
 
