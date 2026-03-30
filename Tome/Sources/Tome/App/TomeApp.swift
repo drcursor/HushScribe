@@ -8,7 +8,6 @@ struct TomeApp: App {
     @State private var settings = AppSettings()
     @State private var recordingState = RecordingState()
     private let updaterController = AppUpdaterController()
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     var body: some Scene {
         WindowGroup {
@@ -18,7 +17,7 @@ struct TomeApp: App {
                 }
         }
         .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 320, height: hasCompletedOnboarding ? 560 : 380)
+        .defaultSize(width: 320, height: 560)
         .commands {
             CommandGroup(after: .appInfo) {
                 CheckForUpdatesView(updater: updaterController.updater)
