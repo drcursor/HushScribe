@@ -168,6 +168,7 @@ Tome/Sources/Tome/
     ├── ContentView.swift
     ├── ControlBar.swift
     ├── TranscriptView.swift
+    ├── WaveformView.swift
     ├── SettingsView.swift
     ├── OnboardingView.swift
     └── CheckForUpdatesView.swift
