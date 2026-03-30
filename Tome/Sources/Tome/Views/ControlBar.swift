@@ -16,6 +16,7 @@ struct PulsingDot: View {
 struct ControlBar: View {
     let isRecording: Bool
     let isPaused: Bool
+    let modelsReady: Bool
     let activeSessionType: SessionType?
     let audioLevel: Float
     let detectedApp: String?
@@ -108,10 +109,10 @@ struct ControlBar: View {
                         HStack(spacing: 6) {
                             Image(systemName: "phone.fill")
                                 .font(.system(size: 14))
-                                .foregroundStyle(Color.fg1)
+                                .foregroundStyle(modelsReady ? Color.fg1 : Color.fg3)
                             Text("Call Capture")
                                 .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(Color.fg1)
+                                .foregroundStyle(modelsReady ? Color.fg1 : Color.fg3)
                             Text("⌘R")
                                 .font(.system(size: 10))
                                 .foregroundStyle(Color.fg3)
@@ -125,16 +126,17 @@ struct ControlBar: View {
                         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06)))
                     }
                     .buttonStyle(.plain)
+                    .disabled(!modelsReady)
                     .keyboardShortcut("r", modifiers: .command)
 
                     Button(action: onStartVoiceMemo) {
                         HStack(spacing: 6) {
                             Image(systemName: "mic.fill")
                                 .font(.system(size: 14))
-                                .foregroundStyle(Color.fg1)
+                                .foregroundStyle(modelsReady ? Color.fg1 : Color.fg3)
                             Text("Voice Memo")
                                 .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(Color.fg1)
+                                .foregroundStyle(modelsReady ? Color.fg1 : Color.fg3)
                             Text("⌘⇧R")
                                 .font(.system(size: 10))
                                 .foregroundStyle(Color.fg3)
@@ -148,6 +150,7 @@ struct ControlBar: View {
                         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06)))
                     }
                     .buttonStyle(.plain)
+                    .disabled(!modelsReady)
                     .keyboardShortcut("r", modifiers: [.command, .shift])
                 }
                 .padding(.horizontal, 12)

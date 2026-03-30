@@ -67,6 +67,7 @@ struct ContentView: View {
             ControlBar(
                 isRecording: isRunning,
                 isPaused: transcriptionEngine?.isPaused ?? false,
+                modelsReady: transcriptionEngine?.modelDownloadState == .ready,
                 activeSessionType: activeSessionType,
                 audioLevel: audioLevel,
                 detectedApp: detectedAppName,
