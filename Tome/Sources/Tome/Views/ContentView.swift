@@ -61,6 +61,7 @@ struct ContentView: View {
             // Glass control bar
             ControlBar(
                 isRecording: isRunning,
+                isPaused: transcriptionEngine?.isPaused ?? false,
                 activeSessionType: activeSessionType,
                 audioLevel: audioLevel,
                 detectedApp: detectedAppName,
@@ -69,7 +70,9 @@ struct ContentView: View {
                 errorMessage: transcriptionEngine?.lastError,
                 onStartCallCapture: { startSession(type: .callCapture) },
                 onStartVoiceMemo: { startSession(type: .voiceMemo) },
-                onStop: stopSession
+                onStop: stopSession,
+                onPause: { transcriptionEngine?.pause() },
+                onResume: { transcriptionEngine?.resume() }
             )
         }
         .frame(minWidth: 280, maxWidth: 360, minHeight: 400)
@@ -120,6 +123,7 @@ struct ContentView: View {
                     silenceSeconds = 0
                     continue
                 }
+                guard !(transcriptionEngine?.isPaused ?? false) else { continue }
                 sessionElapsed += 1
                 if audioLevel < 0.01 {
                     silenceSeconds += 1
