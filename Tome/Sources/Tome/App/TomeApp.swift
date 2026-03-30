@@ -18,6 +18,7 @@ struct TomeApp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 320, height: 560)
+        .windowResizability(.contentSize)
         .commands {
             CommandGroup(after: .appInfo) {
                 CheckForUpdatesView(updater: updaterController.updater)
