@@ -141,6 +141,24 @@ struct ContentView: View {
                 await transcriptLogger.flushIfNeeded()
             }
         }
+        // Menu bar action notifications
+        .onReceive(NotificationCenter.default.publisher(for: .tomeStartCallCapture)) { _ in
+            startSession(type: .callCapture)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .tomeStartVoiceMemo)) { _ in
+            startSession(type: .voiceMemo)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .tomeStopRecording)) { _ in
+            stopSession()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .tomePauseRecording)) { _ in
+            transcriptionEngine?.pause()
+            recordingState.isPaused = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .tomeResumeRecording)) { _ in
+            transcriptionEngine?.resume()
+            recordingState.isPaused = false
+        }
         .onChange(of: settings.inputDeviceID) {
             if isRunning {
                 transcriptionEngine?.restartMic(inputDeviceID: settings.inputDeviceID)
