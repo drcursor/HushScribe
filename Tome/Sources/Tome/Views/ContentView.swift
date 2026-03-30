@@ -103,7 +103,8 @@ struct ContentView: View {
                     continue
                 }
                 if engine.isRunning {
-                    audioLevel = engine.audioLevel
+                    let newLevel = engine.audioLevel
+                    if abs(newLevel - audioLevel) > 0.005 { audioLevel = newLevel }
                     if audioLevel > 0.01 {
                         silenceSeconds = 0
                     }
