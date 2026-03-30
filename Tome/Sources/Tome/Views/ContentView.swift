@@ -187,7 +187,7 @@ struct ContentView: View {
         if isRunning {
             return "\(formatTime(sessionElapsed))\(deviceSuffix)"
         } else if savedFileURL != nil {
-            return "\(formatTime(sessionElapsed)) · Done"
+            return "\(formatTime(sessionElapsed)) · Done\(deviceSuffix)"
         } else {
             return "Ready\(deviceSuffix)"
         }
