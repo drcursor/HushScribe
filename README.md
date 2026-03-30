@@ -13,31 +13,28 @@
 
 ---
 
-Tome is a macOS app that captures meetings and voice memos, transcribes them locally with Parakeet-TDT v2, and drops structured `.md` files straight into your Obsidian vault. Everything runs on-device. Nothing phones home.
+Tome is a macOS app that captures meetings and voice memos, transcribes them locally with Parakeet-TDT v3, and drops structured `.md` files straight into your Obsidian vault. Everything runs on-device. Nothing phones home.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Gremble-io/Tome/main/assets/screenshot-idle.png" width="350" alt="Tome — idle state" />
   <img src="https://raw.githubusercontent.com/Gremble-io/Tome/main/assets/screenshot-recording.png" width="350" alt="Tome — recording with spectrum visualizer" />
 </p>
-</p>
 
 ## Background
 
-I'm not a developer. I'm a consultant who fell down the Obsidian rabbit hole. I built out a vault as a second brain: structured notes with YAML frontmatter, backlinks, tags, and a Claude agent layer that processes everything for me. Client files, meeting notes, action items, daily briefs, all flowing through the vault automatically.
+I'm a consultant who fell down the Obsidian rabbit hole. I built out a vault as a second brain: structured notes with YAML frontmatter, backlinks, tags, and a Claude agent layer that processes everything. Client files, meeting notes, action items, daily briefs, all flowing through the vault automatically.
 
-The problem was capture. I'm on calls all day and I just don't take notes. I needed something that would listen, transcribe, and drop structured markdown into the vault where my agent could pick it up and do the rest. Pull out action items, update client files, connect the dots.
+The problem was capture. I'm on calls all day and I don't take notes. I needed something that would listen, transcribe, and drop structured markdown into the vault where my agent could pick it up and do the rest. Pull out action items, update client files, connect the dots.
 
-I looked at Otter, Granola, Fireflies. They all lock your data in their cloud, their format, their walled garden. None of them output plain markdown. None of them are built to feed into an agent workflow. I just wanted something built for my exact use case.
+I looked at Otter, Granola, Fireflies. They all lock your data in their cloud, their format, their walled garden. None of them output plain markdown. None of them are built to feed into an agent workflow.
 
-With frontier models you can actually do that now. I started from [OpenGranola](https://github.com/yazinsai/OpenGranola), learned Swift along the way, and with Claude's help rewrote most of it: different audio pipeline, local ASR, speaker diarization, vault-native output. First thing I've ever built. Took about two weeks.
-
-I'm putting it out there because if you're running Obsidian with any kind of AI agent setup, you probably have the same gap. No promises on updates or a roadmap. I built this for myself and it works. If it's useful to you, cool.
+I started from [OpenGranola](https://github.com/yazinsai/OpenGranola), learned Swift along the way, and rebuilt it with a different audio pipeline, local ASR, speaker diarization, and vault-native output. If you're running Obsidian with any kind of AI agent setup, you probably have the same gap.
 
 ## Why Tome?
 
 - **Plain markdown out.** YAML frontmatter, tags, timestamps. Your vault already knows what to do with it. No proprietary export, no copy-paste, no middleman.
 - **Built for the agent pipeline.** Tome is just the capture layer. You talk, it transcribes, your agent picks up the `.md` and does whatever you've wired it to do.
-- **Runs on your machine.** Parakeet-TDT v2 on Apple Silicon. No API keys, no accounts, no subscriptions, no data leaving the building.
+- **Runs on your machine.** Parakeet-TDT v3 on Apple Silicon. No API keys, no accounts, no subscriptions, no data leaving the building.
 
 ```
 speak → capture → vault → agent → knowledge base
@@ -47,7 +44,7 @@ Tome does the first three. Your agent does the rest.
 
 ## Features
 
-- **Local transcription** via Parakeet-TDT v2 ([FluidAudio](https://github.com/FluidInference/FluidAudio)) on Apple Silicon. Nothing hits the network.
+- **Multilingual transcription** via Parakeet-TDT v3 ([FluidAudio](https://github.com/FluidInference/FluidAudio)) on Apple Silicon. 25 European languages, auto-detected. Nothing hits the network.
 - **Call Capture** grabs mic + system audio. Detects which conferencing app you're in (Teams, Zoom, Slack, etc.) and filters audio to just that app. Your Spotify and notification sounds stay out of the transcript.
 - **Voice Memo** is mic only. For quick thoughts, verbal notes, stream of consciousness. Saves to a separate folder so it doesn't clutter your meeting transcripts.
 - **Speaker diarization** runs after the call ends. pyannote splits the remote audio into Speaker 2, Speaker 3, Speaker 4. Not perfect, but way better than one wall of unattributed text.
@@ -63,7 +60,7 @@ Tome does the first three. Your agent does the rest.
 └─────────────┘     │  Tome            │     │  Obsidian     │
                     │  ┌────────────┐  │────▶│  Vault        │
 ┌─────────────┐     │  │ Parakeet   │  │     │  (.md files)  │
-│  System      │────▶│  │ TDT v2    │  │     │               │
+│  System      │────▶│  │ TDT v3    │  │     │               │
 │  Audio       │     │  └────────────┘  │     └───────┬───────┘
 └─────────────┘     └──────────────────┘             │
                                                      ▼
@@ -191,6 +188,20 @@ Tome/Sources/Tome/
 - **Screen Recording re-prompts monthly.** OS limitation.
 - **Diarization is imperfect.** Works well with headset mics. Laptop speakers with crosstalk will give you worse speaker separation.
 - **No live speaker labels.** Diarization runs after the session ends. During the call, remote audio shows as a single stream.
+
+## Troubleshooting
+
+**"Tome is damaged and can't be opened"**
+
+This is macOS Gatekeeper blocking an unsigned app. Until a signed release is available:
+
+1. Right-click (or Control-click) `Tome.app` in `/Applications`
+2. Click **Open**
+3. In the dialog, click **Open** again
+
+You only need to do this once — after that, Tome launches normally.
+
+Alternatively, build from source (see [Build](#build) above) to avoid Gatekeeper entirely.
 
 ## Credits
 
