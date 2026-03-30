@@ -72,7 +72,7 @@ final class TranscriptionEngine {
             let models = try await AsrModels.downloadAndLoad(version: .v3)
             assetStatus = "Initializing ASR..."
             let asr = AsrManager(config: .default)
-            try await asr.initialize(models: models)
+            try await asr.loadModels(models)
             self.asrManager = asr
 
             assetStatus = "Loading VAD model..."
