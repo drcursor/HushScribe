@@ -6,12 +6,13 @@ import Sparkle
 struct TomeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var settings = AppSettings()
+    @State private var recordingState = RecordingState()
     private let updaterController = AppUpdaterController()
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     var body: some Scene {
         WindowGroup {
-            ContentView(settings: settings)
+            ContentView(settings: settings, recordingState: recordingState)
                 .onAppear {
                     settings.applyScreenShareVisibility()
                 }
@@ -35,8 +36,18 @@ struct TomeApp: App {
             }
             .keyboardShortcut("q")
         } label: {
-            Image(systemName: "book.closed")
+            Image(systemName: menuBarIconName)
                 .symbolRenderingMode(.monochrome)
+        }
+    }
+
+    private var menuBarIconName: String {
+        if recordingState.isPaused {
+            return "pause.circle.fill"
+        } else if recordingState.isRecording {
+            return "record.circle.fill"
+        } else {
+            return "book.closed"
         }
     }
 }
