@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.1.1] — 2026-03-30
+## [1.2.0] — 2026-03-30
 - Upgraded FluidAudio to latest (actor-based AsrManager) — fixes Swift 6 build failures on Xcode 26.4+
 - Build script now fails on missing code signing identity instead of silently shipping unsigned
 - Added Gatekeeper troubleshooting to README
