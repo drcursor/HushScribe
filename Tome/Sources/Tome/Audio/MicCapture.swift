@@ -33,6 +33,13 @@ final class MicCapture: @unchecked Sendable {
                     UInt32(MemoryLayout<AudioDeviceID>.size)
                 )
                 diagLog("[MIC-2] setInputDevice status=\(status) (0=ok)")
+                guard status == noErr else {
+                    let msg = "Failed to set input device (OSStatus \(status))"
+                    diagLog("[MIC-2-FAIL] \(msg)")
+                    errorHolder.value = msg
+                    continuation.finish()
+                    return
+                }
             } else {
                 diagLog("[MIC-2] no deviceID, using system default")
             }
@@ -95,6 +102,7 @@ final class MicCapture: @unchecked Sendable {
     func stop() {
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
+        engine.reset()
         _audioLevel.value = 0
     }
 
