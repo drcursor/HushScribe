@@ -41,7 +41,8 @@ final class TranscriptionEngine {
 
     /// Shared FluidAudio instances
     private var asrManager: AsrManager?
-    private var vadManager: VadManager?
+    private var micVadManager: VadManager?
+    private var sysVadManager: VadManager?
 
     /// Tracks the resolved mic device ID currently in use.
     private var currentMicDeviceID: AudioDeviceID = 0
@@ -77,8 +78,10 @@ final class TranscriptionEngine {
 
             assetStatus = "Loading VAD model..."
             diagLog("[ENGINE-1b] loading VAD model...")
-            let vad = try await VadManager()
-            self.vadManager = vad
+            let micVad = try await VadManager()
+            self.micVadManager = micVad
+            let sysVad = try await VadManager(config: VadConfig(defaultThreshold: 0.92))
+            self.sysVadManager = sysVad
 
             assetStatus = "Models ready"
             diagLog("[ENGINE-2] FluidAudio models loaded")
@@ -91,7 +94,7 @@ final class TranscriptionEngine {
             return
         }
 
-        guard let asrManager, let vadManager else { return }
+        guard let asrManager, let micVadManager, let sysVadManager else { return }
 
         // 2. Start mic capture
         userSelectedDeviceID = inputDeviceID
@@ -117,7 +120,7 @@ final class TranscriptionEngine {
         let store = transcriptStore
         let micTranscriber = StreamingTranscriber(
             asrManager: asrManager,
-            vadManager: vadManager,
+            vadManager: micVadManager,
             speaker: .you,
             audioSource: .microphone,
             onPartial: { text in
@@ -144,7 +147,7 @@ final class TranscriptionEngine {
         if let sysStream = sysStreams?.systemAudio {
             let sysTranscriber = StreamingTranscriber(
                 asrManager: asrManager,
-                vadManager: vadManager,
+                vadManager: sysVadManager,
                 speaker: .them,
                 audioSource: .system,
                 onPartial: { text in
@@ -178,7 +181,7 @@ final class TranscriptionEngine {
     /// Restart only the mic capture with a new device, keeping system audio and models intact.
     /// Pass the raw setting value (0 = system default, or a specific AudioDeviceID).
     func restartMic(inputDeviceID: AudioDeviceID) {
-        guard isRunning, let asrManager, let vadManager else { return }
+        guard isRunning, let asrManager, let micVadManager else { return }
 
         // Only update user selection when explicitly changed (not from OS listener)
         if inputDeviceID != 0 || userSelectedDeviceID != 0 {
@@ -204,7 +207,7 @@ final class TranscriptionEngine {
         let store = transcriptStore
         let micTranscriber = StreamingTranscriber(
             asrManager: asrManager,
-            vadManager: vadManager,
+            vadManager: micVadManager,
             speaker: .you,
             audioSource: .microphone,
             onPartial: { text in
