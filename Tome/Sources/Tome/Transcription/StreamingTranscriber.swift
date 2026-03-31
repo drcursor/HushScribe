@@ -8,7 +8,6 @@ final class StreamingTranscriber: @unchecked Sendable {
     private let vadManager: VadManager
     private let speaker: Speaker
     private let audioSource: AudioSource
-    private let vadConfig: VadConfig
     private let onPartial: @Sendable (String) -> Void
     private let onFinal: @Sendable (String) -> Void
     private let log = Logger(subsystem: "io.gremble.tome", category: "StreamingTranscriber")
@@ -27,7 +26,6 @@ final class StreamingTranscriber: @unchecked Sendable {
         vadManager: VadManager,
         speaker: Speaker,
         audioSource: AudioSource = .microphone,
-        vadConfig: VadConfig = .default,
         onPartial: @escaping @Sendable (String) -> Void,
         onFinal: @escaping @Sendable (String) -> Void
     ) {
@@ -35,7 +33,6 @@ final class StreamingTranscriber: @unchecked Sendable {
         self.vadManager = vadManager
         self.speaker = speaker
         self.audioSource = audioSource
-        self.vadConfig = vadConfig
         self.onPartial = onPartial
         self.onFinal = onFinal
     }
@@ -81,7 +78,7 @@ final class StreamingTranscriber: @unchecked Sendable {
                     let result = try await vadManager.processStreamingChunk(
                         chunk,
                         state: vadState,
-                        config: vadConfig,
+                        config: .default,
                         returnSeconds: true,
                         timeResolution: 2
                     )
