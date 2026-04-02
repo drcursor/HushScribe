@@ -8,7 +8,7 @@ actor SessionStore {
 
     init() {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        sessionsDirectory = appSupport.appendingPathComponent("Tome/sessions", isDirectory: true)
+        sessionsDirectory = appSupport.appendingPathComponent("HushScribe/sessions", isDirectory: true)
 
         try? FileManager.default.createDirectory(at: sessionsDirectory, withIntermediateDirectories: true)
 

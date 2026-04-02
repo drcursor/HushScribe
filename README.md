@@ -1,4 +1,4 @@
-<h1 align="center">Tome</h1>
+<h1 align="center">HushScribe</h1>
 
 <p align="center">
   <strong>Local meeting capture → Obsidian vault → AI agent pipeline. No cloud. No API keys. Your data.</strong>
@@ -13,11 +13,13 @@
 
 ---
 
-Tome is a macOS app that captures meetings and voice memos, transcribes them locally with Parakeet-TDT v3, and drops structured `.md` files straight into your Obsidian vault. Everything runs on-device. Nothing phones home.
+> **HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome)**, substantially extended with additional features and a new name. See [Credits](#credits) for the original project.
+
+HushScribe is a macOS app that captures meetings and voice memos, transcribes them locally with Parakeet-TDT v3, and drops structured `.md` files straight into your Obsidian vault. Everything runs on-device. Nothing phones home.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Gremble-io/Tome/main/assets/screenshot-idle.png" width="350" alt="Tome — idle state" />
-  <img src="https://raw.githubusercontent.com/Gremble-io/Tome/main/assets/screenshot-recording.png" width="350" alt="Tome — recording with spectrum visualizer" />
+  <img src="https://raw.githubusercontent.com/Gremble-io/Tome/main/assets/screenshot-idle.png" width="350" alt="HushScribe — idle state" />
+  <img src="https://raw.githubusercontent.com/Gremble-io/Tome/main/assets/screenshot-recording.png" width="350" alt="HushScribe — recording with spectrum visualizer" />
 </p>
 
 ## Background
@@ -30,17 +32,17 @@ I looked at Otter, Granola, Fireflies. They all lock your data in their cloud, t
 
 I started from [OpenGranola](https://github.com/yazinsai/OpenGranola), learned Swift along the way, and rebuilt it with a different audio pipeline, local ASR, speaker diarization, and vault-native output. If you're running Obsidian with any kind of AI agent setup, you probably have the same gap.
 
-## Why Tome?
+## Why HushScribe?
 
 - **Plain markdown out.** YAML frontmatter, tags, timestamps. Your vault already knows what to do with it. No proprietary export, no copy-paste, no middleman.
-- **Built for the agent pipeline.** Tome is just the capture layer. You talk, it transcribes, your agent picks up the `.md` and does whatever you've wired it to do.
+- **Built for the agent pipeline.** HushScribe is just the capture layer. You talk, it transcribes, your agent picks up the `.md` and does whatever you've wired it to do.
 - **Runs on your machine.** Parakeet-TDT v3 on Apple Silicon. No API keys, no accounts, no subscriptions, no data leaving the building.
 
 ```
 speak → capture → vault → agent → knowledge base
 ```
 
-Tome does the first three. Your agent does the rest.
+HushScribe does the first three. Your agent does the rest.
 
 ## Features
 
@@ -57,7 +59,7 @@ Tome does the first three. Your agent does the rest.
 ```
 ┌─────────────┐     ┌──────────────────┐     ┌───────────────┐
 │  Microphone  │────▶│                  │     │               │
-└─────────────┘     │  Tome            │     │  Obsidian     │
+└─────────────┘     │  HushScribe      │     │  Obsidian     │
                     │  ┌────────────┐  │────▶│  Vault        │
 ┌─────────────┐     │  │ Parakeet   │  │     │  (.md files)  │
 │  System      │────▶│  │ TDT v3    │  │     │               │
@@ -100,7 +102,7 @@ attendees: ["You", "Speaker 2"]
 tags:
   - log/meeting
   - status/inbox
-  - source/tome
+  - source/hushscribe
 ---
 
 # Call Recording — 2026-03-23 10:00
@@ -120,8 +122,8 @@ Voice memos use `type: fleeting` with a single speaker. Same structure, same fro
 **Requirements:** Apple Silicon Mac, macOS 26+, Xcode 26.3+
 
 ```bash
-git clone https://github.com/Gremble-io/Tome.git
-cd Tome
+git clone https://github.com/drcursor/HushScribe.git
+cd HushScribe
 ./scripts/build_swift_app.sh
 ```
 
@@ -130,7 +132,7 @@ Builds and installs to `/Applications`. First launch downloads the Parakeet ASR 
 **Dev build:**
 
 ```bash
-cd Tome
+cd HushScribe
 swift build
 ```
 
@@ -141,27 +143,27 @@ swift build
 | **Microphone** | All modes | Captures your voice |
 | **Screen Recording** | Call Capture only | ScreenCaptureKit needs this for system audio from conferencing apps |
 
-macOS re-prompts for Screen Recording permission roughly monthly. That's an OS thing, not Tome.
+macOS re-prompts for Screen Recording permission roughly monthly. That's an OS thing, not HushScribe.
 
 ## Architecture
 
 ```
 Tome/Sources/Tome/
 ├── App/
-│   ├── TomeApp.swift               # App entry point
-│   └── AppUpdaterController.swift  # Sparkle update controller
+│   ├── HushScribeApp.swift             # App entry point
+│   └── AppUpdaterController.swift      # Sparkle update controller
 ├── Audio/
-│   ├── SystemAudioCapture.swift    # ScreenCaptureKit + per-app filtering
-│   └── MicCapture.swift            # AVAudioEngine mic input
+│   ├── SystemAudioCapture.swift        # ScreenCaptureKit + per-app filtering
+│   └── MicCapture.swift                # AVAudioEngine mic input
 ├── Models/
-│   ├── Models.swift                # Domain types (Utterance, Speaker, etc.)
-│   └── TranscriptStore.swift       # Observable transcript state
+│   ├── Models.swift                    # Domain types (Utterance, Speaker, etc.)
+│   └── TranscriptStore.swift           # Observable transcript state
 ├── Transcription/
-│   ├── TranscriptionEngine.swift   # Dual-stream capture + diarization
-│   └── StreamingTranscriber.swift  # VAD + Parakeet ASR pipeline
+│   ├── TranscriptionEngine.swift       # Dual-stream capture + diarization
+│   └── StreamingTranscriber.swift      # VAD + Parakeet ASR pipeline
 ├── Storage/
-│   ├── TranscriptLogger.swift      # .md output with YAML frontmatter
-│   └── SessionStore.swift          # Session metadata
+│   ├── TranscriptLogger.swift          # .md output with YAML frontmatter
+│   └── SessionStore.swift              # Session metadata
 ├── Settings/
 │   └── AppSettings.swift
 └── Views/
@@ -192,21 +194,21 @@ Tome/Sources/Tome/
 
 ## Troubleshooting
 
-**"Tome is damaged and can't be opened"**
+**"HushScribe is damaged and can't be opened"**
 
 This is macOS Gatekeeper blocking an unsigned app. Until a signed release is available:
 
-1. Right-click (or Control-click) `Tome.app` in `/Applications`
+1. Right-click (or Control-click) `HushScribe.app` in `/Applications`
 2. Click **Open**
 3. In the dialog, click **Open** again
 
-You only need to do this once — after that, Tome launches normally.
+You only need to do this once — after that, HushScribe launches normally.
 
 Alternatively, build from source (see [Build](#build) above) to avoid Gatekeeper entirely.
 
 ## Credits
 
-Started from [OpenGranola](https://github.com/yazinsai/OpenGranola). Substantially rewritten from there.
+HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io), which itself started from [OpenGranola](https://github.com/yazinsai/OpenGranola). Substantially rewritten from both.
 
 ## License
 

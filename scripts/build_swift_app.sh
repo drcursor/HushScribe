@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build signed macOS .app for Tome (Swift)
+# Build signed macOS .app for HushScribe (Swift)
 # Usage:
 #   ./scripts/build_swift_app.sh
 #
@@ -16,15 +16,15 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT_DIR="$(pwd)"
 SWIFT_DIR="$ROOT_DIR/Tome"
-APP_NAME="Tome"
-BUNDLE_ID="io.gremble.tome"
+APP_NAME="HushScribe"
+BUNDLE_ID="com.drcursor.hushscribe"
 
 echo "=== Building $APP_NAME (Swift) ==="
 
 # Build release binary
 cd "$SWIFT_DIR"
 swift build -c release 2>&1
-BINARY_PATH=".build/release/Tome"
+BINARY_PATH=".build/release/HushScribe"
 
 if [[ ! -f "$BINARY_PATH" ]]; then
   echo "Build failed: binary not found at $BINARY_PATH"
@@ -41,11 +41,11 @@ mkdir -p "$APP_DIR/Contents/Resources"
 mkdir -p "$APP_DIR/Contents/Frameworks"
 
 # Copy binary
-cp "$BINARY_PATH" "$APP_DIR/Contents/MacOS/Tome"
+cp "$BINARY_PATH" "$APP_DIR/Contents/MacOS/HushScribe"
 
 # Make the SwiftPM-built executable behave like a normal app bundle by
 # teaching dyld to search the app's embedded Frameworks directory.
-APP_BINARY="$APP_DIR/Contents/MacOS/Tome"
+APP_BINARY="$APP_DIR/Contents/MacOS/HushScribe"
 if ! otool -l "$APP_BINARY" | grep -Fq "@executable_path/../Frameworks"; then
   install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP_BINARY"
   echo "Added app Frameworks rpath to executable"
@@ -86,7 +86,7 @@ fi
 
 # Sign the app
 if [[ -n "${CODESIGN_IDENTITY:-}" ]]; then
-  ENTITLEMENTS="$SWIFT_DIR/Sources/Tome/Tome.entitlements"
+  ENTITLEMENTS="$SWIFT_DIR/Sources/Tome/HushScribe.entitlements"
   echo "Signing with: $CODESIGN_IDENTITY"
 
   # Sign Sparkle components inside-out (innermost first)

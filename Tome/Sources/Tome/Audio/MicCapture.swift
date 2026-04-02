@@ -33,6 +33,13 @@ final class MicCapture: @unchecked Sendable {
                     UInt32(MemoryLayout<AudioDeviceID>.size)
                 )
                 diagLog("[MIC-2] setInputDevice status=\(status) (0=ok)")
+                guard status == noErr else {
+                    let msg = "Failed to set input device (OSStatus \(status))"
+                    diagLog("[MIC-2-FAIL] \(msg)")
+                    errorHolder.value = msg
+                    continuation.finish()
+                    return
+                }
             } else {
                 diagLog("[MIC-2] no deviceID, using system default")
             }
@@ -92,9 +99,19 @@ final class MicCapture: @unchecked Sendable {
         }
     }
 
+    func pause() {
+        engine.pause()
+        _audioLevel.value = 0
+    }
+
+    func resume() throws {
+        try engine.start()
+    }
+
     func stop() {
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
+        engine.reset()
         _audioLevel.value = 0
     }
 
@@ -244,6 +261,18 @@ final class MicCapture: @unchecked Sendable {
         var size = UInt32(MemoryLayout<CFString>.size)
         let status = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &uid)
         return status == noErr ? uid as String : nil
+    }
+
+    static func deviceName(for deviceID: AudioDeviceID) -> String? {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyDeviceNameCFString,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var name: CFString = "" as CFString
+        var size = UInt32(MemoryLayout<CFString>.size)
+        let status = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &name)
+        return status == noErr ? name as String : nil
     }
 
     static func defaultInputDeviceID() -> AudioDeviceID? {
