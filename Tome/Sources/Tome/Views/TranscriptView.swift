@@ -77,7 +77,7 @@ private struct UtteranceBubble: View {
             .frame(maxWidth: 260, alignment: .leading)
             .background(Color.bg1.opacity(0.7))
             .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.06)))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(NSColor.separatorColor)))
             .overlay(alignment: .leading) {
                 UnevenRoundedRectangle(topLeadingRadius: 10, bottomLeadingRadius: 10)
                     .fill(accentColor)
@@ -116,7 +116,7 @@ private struct VolatileIndicator: View {
             .frame(maxWidth: 260, alignment: .leading)
             .background(Color.bg1.opacity(0.7))
             .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.06)))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(NSColor.separatorColor)))
             .overlay(alignment: .leading) {
                 UnevenRoundedRectangle(topLeadingRadius: 10, bottomLeadingRadius: 10)
                     .fill(accentColor)
@@ -134,20 +134,20 @@ private struct VolatileIndicator: View {
 // MARK: - Design Tokens
 
 extension Color {
-    // Backgrounds — warm
-    static let bg0 = Color(red: 0.10, green: 0.09, blue: 0.09)   // #1A1818
-    static let bg1 = Color(red: 0.18, green: 0.17, blue: 0.16)   // #2E2B29 (glass base)
-    static let bg2 = Color(red: 0.14, green: 0.13, blue: 0.12)   // #242120
+    // Backgrounds — system adaptive
+    static let bg0 = Color(NSColor.windowBackgroundColor)
+    static let bg1 = Color(NSColor.controlBackgroundColor)
+    static let bg2 = Color(NSColor.underPageBackgroundColor)
 
-    // Foregrounds — warm cream
-    static let fg1 = Color(red: 0.94, green: 0.93, blue: 0.91)   // #F0EDE8
-    static let fg2 = Color(red: 0.54, green: 0.52, blue: 0.50)   // #8A8480
-    static let fg3 = Color(red: 0.36, green: 0.34, blue: 0.33)   // #5C5854
+    // Foregrounds — system adaptive
+    static let fg1 = Color.primary
+    static let fg2 = Color.secondary
+    static let fg3 = Color(NSColor.tertiaryLabelColor)
 
-    // Accent — lavender
-    static let accent1 = Color(red: 0.77, green: 0.63, blue: 1.0) // #C4A0FF
-    static let accent2 = Color(red: 0.58, green: 0.47, blue: 0.75)// dimmer
+    // Accent — follows system accent color
+    static let accent1 = Color.accentColor
+    static let accent2 = Color.accentColor
 
     // Recording red
-    static let recordRed = Color(red: 0.91, green: 0.36, blue: 0.36) // #E85B5B
+    static let recordRed = Color.red
 }

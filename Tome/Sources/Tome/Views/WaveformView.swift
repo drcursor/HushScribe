@@ -6,7 +6,7 @@ struct WaveformView: View {
 
     var body: some View {
         if isRecording {
-            SpectrumVisualizer(audioLevel: audioLevel)
+            VUMeter(audioLevel: audioLevel)
                 .frame(height: 28)
                 .clipped()
         } else {
@@ -19,48 +19,57 @@ struct WaveformView: View {
     }
 }
 
-private let barCount = 24
+private let barCount = 28
+private let segmentCount = 5
 
 // Bell curve weights — center bars taller, edges shorter
 private let positionCurve: [Float] = (0..<barCount).map { i in
     let x = (Float(i) - Float(barCount - 1) / 2) / (Float(barCount) / 4)
-    return exp(-x * x / 2)  // Gaussian
+    return exp(-x * x / 2)
 }
 
-private struct SpectrumVisualizer: View {
+// Color per segment index (0 = top, segmentCount-1 = bottom)
+private func segmentColor(index: Int) -> Color {
+    if index == 0 {
+        return Color(red: 1.0, green: 0.15, blue: 0.05)   // red (top)
+    } else if index == 1 {
+        return Color(red: 0.95, green: 0.78, blue: 0.0)   // yellow
+    } else {
+        return Color(red: 0.05, green: 0.92, blue: 0.22)  // green (bottom)
+    }
+}
+
+private struct VUMeter: View {
     let audioLevel: Float
 
     @State private var barOffsets: [Float] = []
     @State private var barHeights: [CGFloat] = Array(repeating: 0, count: barCount)
-    @State private var peakHeights: [CGFloat] = Array(repeating: 0, count: barCount)
-    @State private var peakTimers: [Int] = Array(repeating: 0, count: barCount)  // hold ticks
+    @State private var peakSegments: [Int] = Array(repeating: -1, count: barCount)
+    @State private var peakTimers: [Int] = Array(repeating: 0, count: barCount)
 
-    private var glowLevel: CGFloat { CGFloat(min(audioLevel * 1.5, 1.0)) }
+    private var glowLevel: CGFloat { CGFloat(min(audioLevel * 1.4, 1.0)) }
 
     var body: some View {
         HStack(spacing: 2) {
             ForEach(0..<barCount, id: \.self) { i in
                 VStack(spacing: 1) {
-                    // Top half (mirrored)
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(Color.accent1)
-                        .frame(height: max(barHeights[i], peakHeights[i]))
-                        .frame(maxHeight: 13, alignment: .bottom)
-
-                    // Bottom half (mirror)
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(Color.accent1.opacity(0.7))
-                        .frame(height: max(barHeights[i], peakHeights[i]) * 0.8)
-                        .frame(maxHeight: 13, alignment: .top)
+                    ForEach(0..<segmentCount, id: \.self) { seg in
+                        let litCount = Int((barHeights[i] / 13.0) * CGFloat(segmentCount) + 0.5)
+                        let isLit = (segmentCount - 1 - seg) < litCount
+                        let isPeak = peakSegments[i] == seg
+                        let color = segmentColor(index: seg)
+                        Rectangle()
+                            .fill(isLit || isPeak ? color : color.opacity(0.08))
+                            .frame(height: 4)
+                    }
                 }
             }
         }
         .padding(.horizontal, 12)
         .drawingGroup()
-        .shadow(color: Color.accent1.opacity(glowLevel * 0.6), radius: glowLevel * 8)
-        .shadow(color: Color.accent1.opacity(glowLevel > 0.7 ? (glowLevel - 0.7) * CGFloat(2) : 0), radius: 16)
+        .shadow(color: Color(red: 0.05, green: 0.92, blue: 0.22).opacity(glowLevel * 0.5), radius: glowLevel * 6)
         .onAppear {
-            barOffsets = (0..<barCount).map { _ in Float.random(in: -0.15...0.15) }
+            barOffsets = (0..<barCount).map { _ in Float.random(in: -0.12...0.12) }
         }
         .onChange(of: audioLevel) {
             updateBars()
@@ -70,44 +79,40 @@ private struct SpectrumVisualizer: View {
     private func updateBars() {
         let level = CGFloat(audioLevel)
 
-        // Jitter the offsets slightly each update for organic feel
         for i in 0..<barCount {
-            barOffsets[i] = Float.random(in: -0.15...0.15)
+            barOffsets[i] = Float.random(in: -0.12...0.12)
         }
 
-        // Calculate new bar heights
         var newHeights = [CGFloat](repeating: 0, count: barCount)
         for i in 0..<barCount {
             let curve = CGFloat(positionCurve[i])
             let jitter = CGFloat(1.0 + barOffsets[i])
-            newHeights[i] = level * curve * jitter * 13  // 13pt max per half
+            newHeights[i] = level * curve * jitter * 13
         }
 
-        // Update peaks — hold at top, then decay
-        var newPeaks = peakHeights
+        // Peak hold per bar (as segment index from top)
+        var newPeaks = peakSegments
         var newTimers = peakTimers
         for i in 0..<barCount {
-            if newHeights[i] >= newPeaks[i] {
-                // New peak — hold it
-                newPeaks[i] = newHeights[i]
-                newTimers[i] = 3  // hold for ~3 updates (300ms at 100ms poll)
+            let litCount = Int((newHeights[i] / 13.0) * CGFloat(segmentCount) + 0.5)
+            let topLitSeg = litCount > 0 ? segmentCount - litCount : -1
+
+            if topLitSeg >= 0 && (newPeaks[i] < 0 || topLitSeg <= newPeaks[i]) {
+                newPeaks[i] = topLitSeg
+                newTimers[i] = 4
             } else if newTimers[i] > 0 {
-                // Still holding
                 newTimers[i] -= 1
-            } else {
-                // Decay toward current height
-                newPeaks[i] = newPeaks[i] * 0.7 + newHeights[i] * 0.3
-                if newPeaks[i] < 0.5 { newPeaks[i] = 0 }
+            } else if newPeaks[i] >= 0 {
+                newPeaks[i] = newPeaks[i] + 1
+                if newPeaks[i] >= segmentCount { newPeaks[i] = -1 }
             }
         }
 
+        peakSegments = newPeaks
         peakTimers = newTimers
 
-        withAnimation(.easeOut(duration: 0.12)) {
+        withAnimation(.easeOut(duration: 0.08)) {
             barHeights = newHeights
-        }
-        withAnimation(.easeIn(duration: 0.4)) {
-            peakHeights = newPeaks
         }
     }
 }

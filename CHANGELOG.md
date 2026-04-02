@@ -1,6 +1,15 @@
 # Changelog
 
-## [1.2.2] — 2026-03-31
+> **Fork note:** HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io). Changes merged from the upstream Tome repository are marked with `[upstream]` in this changelog.
+
+## [1.2.3] — 2026-04-02 (HushScribe rebrand)
+- Renamed project to HushScribe (fork of Tome by Gremble-io)
+- Replaced all user-visible references to Tome and gremble with HushScribe and drcursor
+- Updated bundle ID to `com.drcursor.hushscribe`
+- Updated default vault paths to `~/Documents/HushScribe/`
+- Updated appcast and GitHub release URLs to `drcursor/HushScribe`
+
+## [1.2.2] — 2026-03-31 [upstream]
 - Raised VAD threshold on system audio stream to reduce echo bleed during calls
 
 ## [1.2.0] — 2026-03-30

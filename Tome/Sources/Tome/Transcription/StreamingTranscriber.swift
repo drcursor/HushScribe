@@ -10,7 +10,7 @@ final class StreamingTranscriber: @unchecked Sendable {
     private let audioSource: AudioSource
     private let onPartial: @Sendable (String) -> Void
     private let onFinal: @Sendable (String) -> Void
-    private let log = Logger(subsystem: "io.gremble.tome", category: "StreamingTranscriber")
+    private let log = Logger(subsystem: "com.drcursor.hushscribe", category: "StreamingTranscriber")
 
     /// Resampler from source format to 16kHz mono Float32.
     private var converter: AVAudioConverter?

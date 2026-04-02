@@ -44,7 +44,7 @@ final class SystemAudioCapture: NSObject, @unchecked Sendable, SCStreamDelegate,
         }
 
         // Set up audio buffer file for post-session diarization
-        let bufferURL = FileManager.default.temporaryDirectory.appendingPathComponent("tome_sys_audio_\(UUID().uuidString).wav")
+        let bufferURL = FileManager.default.temporaryDirectory.appendingPathComponent("hushscribe_sys_audio_\(UUID().uuidString).wav")
         _bufferFilePath.withLock { $0 = bufferURL }
         _audioFileWriter.withLock { $0 = nil } // will be created on first audio callback
 

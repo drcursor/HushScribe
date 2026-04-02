@@ -9,9 +9,9 @@ final class RecordingState {
 }
 
 extension Notification.Name {
-    static let tomeStartCallCapture = Notification.Name("tomeStartCallCapture")
-    static let tomeStartVoiceMemo = Notification.Name("tomeStartVoiceMemo")
-    static let tomeStopRecording = Notification.Name("tomeStopRecording")
-    static let tomePauseRecording = Notification.Name("tomePauseRecording")
-    static let tomeResumeRecording = Notification.Name("tomeResumeRecording")
+    static let hushscribeStartCallCapture = Notification.Name("hushscribeStartCallCapture")
+    static let hushscribeStartVoiceMemo = Notification.Name("hushscribeStartVoiceMemo")
+    static let hushscribeStopRecording = Notification.Name("hushscribeStopRecording")
+    static let hushscribePauseRecording = Notification.Name("hushscribePauseRecording")
+    static let hushscribeResumeRecording = Notification.Name("hushscribeResumeRecording")
 }

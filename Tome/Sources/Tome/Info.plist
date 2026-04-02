@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>Tome</string>
+    <string>HushScribe</string>
     <key>CFBundleDisplayName</key>
-    <string>Tome</string>
+    <string>HushScribe</string>
     <key>CFBundleIdentifier</key>
-    <string>io.gremble.tome</string>
+    <string>com.drcursor.hushscribe</string>
     <key>CFBundleVersion</key>
-    <string>1.2.2</string>
+    <string>2.2.0</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.2.2</string>
+    <string>2.2</string>
     <key>CFBundleExecutable</key>
-    <string>Tome</string>
+    <string>HushScribe</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundlePackageType</key>
@@ -21,16 +21,13 @@
     <key>LSMinimumSystemVersion</key>
     <string>26.0</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Tome needs microphone access to transcribe your voice in real-time during conversations.</string>
+    <string>HushScribe needs microphone access to transcribe your voice in real-time during conversations.</string>
     <key>NSScreenCaptureUsageDescription</key>
-    <string>Tome needs screen capture permission to capture system audio from other participants.</string>
+    <string>HushScribe needs screen capture permission to capture system audio from other participants.</string>
+    <key>LSUIElement</key>
+    <true/>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.productivity</string>
-    <key>SUFeedURL</key>
-    <string>https://raw.githubusercontent.com/Gremble-io/Tome/gh-pages/appcast.xml</string>
-    <key>SUEnableAutomaticChecks</key>
-    <true/>
-    <key>SUPublicEDKey</key>
-    <string>LT2/oCSuJPmnri+6b62DV1WhHxSmWrJ1nZzbAK2ipV4=</string>
+
 </dict>
 </plist>
