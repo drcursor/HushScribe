@@ -18,6 +18,7 @@ private let conferencingBundleIDs: [String: String] = [
 
 struct ContentView: View {
     @Bindable var settings: AppSettings
+    var recordingState: RecordingState
     @State private var transcriptStore = TranscriptStore()
     @State private var transcriptionEngine: TranscriptionEngine?
     @State private var sessionStore = SessionStore()
@@ -41,7 +42,11 @@ struct ContentView: View {
             if !isRunning && transcriptStore.utterances.isEmpty
                 && transcriptStore.volatileYouText.isEmpty
                 && transcriptStore.volatileThemText.isEmpty {
-                emptyState
+                if transcriptionEngine?.modelDownloadState != .ready {
+                    modelDownloadState
+                } else {
+                    emptyState
+                }
             } else {
                 TranscriptView(
                     utterances: transcriptStore.utterances,
@@ -61,20 +66,23 @@ struct ContentView: View {
             // Glass control bar
             ControlBar(
                 isRecording: isRunning,
+                isPaused: transcriptionEngine?.isPaused ?? false,
+                modelsReady: transcriptionEngine?.modelDownloadState == .ready,
                 activeSessionType: activeSessionType,
                 audioLevel: audioLevel,
                 detectedApp: detectedAppName,
                 silenceSeconds: silenceSeconds,
-                statusMessage: transcriptionEngine?.assetStatus,
+                statusMessage: transcriptionEngine?.modelDownloadState == .downloading ? nil : transcriptionEngine?.assetStatus,
                 errorMessage: transcriptionEngine?.lastError,
                 onStartCallCapture: { startSession(type: .callCapture) },
                 onStartVoiceMemo: { startSession(type: .voiceMemo) },
-                onStop: stopSession
+                onStop: stopSession,
+                onPause: pauseFromMenu,
+                onResume: resumeFromMenu
             )
         }
-        .frame(minWidth: 280, maxWidth: 360, minHeight: 400)
+        .frame(minWidth: 320, maxWidth: 320, minHeight: 400)
         .background(Color.bg0)
-        .preferredColorScheme(.dark)
         .overlay {
             if showOnboarding {
                 OnboardingView(isPresented: $showOnboarding)
@@ -89,6 +97,10 @@ struct ContentView: View {
         .task {
             if !hasCompletedOnboarding {
                 showOnboarding = true
+                // LSUIElement apps don't auto-activate; bring the window to front for onboarding.
+                NSApp.setActivationPolicy(.regular)
+                NSApp.activate(ignoringOtherApps: true)
+                NSApp.mainWindow?.makeKeyAndOrderFront(nil)
             }
             if transcriptionEngine == nil {
                 transcriptionEngine = TranscriptionEngine(transcriptStore: transcriptStore)
@@ -103,7 +115,8 @@ struct ContentView: View {
                     continue
                 }
                 if engine.isRunning {
-                    audioLevel = engine.audioLevel
+                    let newLevel = engine.audioLevel
+                    if abs(newLevel - audioLevel) > 0.005 { audioLevel = newLevel }
                     if audioLevel > 0.01 {
                         silenceSeconds = 0
                     }
@@ -120,6 +133,7 @@ struct ContentView: View {
                     silenceSeconds = 0
                     continue
                 }
+                guard !(transcriptionEngine?.isPaused ?? false) else { continue }
                 sessionElapsed += 1
                 if audioLevel < 0.01 {
                     silenceSeconds += 1
@@ -136,6 +150,22 @@ struct ContentView: View {
                 await transcriptLogger.flushIfNeeded()
             }
         }
+        // Menu bar action notifications
+        .onReceive(NotificationCenter.default.publisher(for: .hushscribeStartCallCapture)) { _ in
+            startSession(type: .callCapture)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .hushscribeStartVoiceMemo)) { _ in
+            startSession(type: .voiceMemo)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .hushscribeStopRecording)) { _ in
+            stopSession()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .hushscribePauseRecording)) { _ in
+            pauseFromMenu()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .hushscribeResumeRecording)) { _ in
+            resumeFromMenu()
+        }
         .onChange(of: settings.inputDeviceID) {
             if isRunning {
                 transcriptionEngine?.restartMic(inputDeviceID: settings.inputDeviceID)
@@ -150,7 +180,7 @@ struct ContentView: View {
 
     private var topBar: some View {
         HStack(spacing: 0) {
-            Text("TOME")
+            Text("HUSHSCRIBE")
                 .font(.system(size: 14, weight: .heavy))
                 .tracking(3)
                 .foregroundStyle(Color.fg1)
@@ -174,18 +204,69 @@ struct ContentView: View {
         }
         .padding(.horizontal, 16)
         .frame(height: 44)
-        .background(Color.bg1.opacity(0.45))
+        .background(.bar)
         .overlay(Divider(), alignment: .bottom)
     }
 
     private var topBarStatus: String {
+        let deviceID = settings.inputDeviceID == 0
+            ? (MicCapture.defaultInputDeviceID() ?? 0)
+            : settings.inputDeviceID
+        let deviceSuffix = deviceID != 0 ? MicCapture.deviceName(for: deviceID).map { " · \($0)" } ?? "" : ""
+
         if isRunning {
-            return formatTime(sessionElapsed)
+            return "\(formatTime(sessionElapsed))\(deviceSuffix)"
         } else if savedFileURL != nil {
-            return "\(formatTime(sessionElapsed)) · Done"
+            return "\(formatTime(sessionElapsed)) · Done\(deviceSuffix)"
         } else {
-            return "Ready"
+            return "Ready\(deviceSuffix)"
         }
+    }
+
+    // MARK: - Model Download State
+
+    private var modelDownloadState: some View {
+        VStack(spacing: 12) {
+            if transcriptionEngine?.modelDownloadState == .downloading {
+                ProgressView()
+                    .controlSize(.large)
+                    .tint(Color.accent1)
+                Text(transcriptionEngine?.assetStatus ?? "Downloading...")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.fg2)
+                    .multilineTextAlignment(.center)
+            } else {
+                Image(systemName: "arrow.down.circle")
+                    .font(.system(size: 28))
+                    .foregroundStyle(Color.fg3)
+                Text("Transcription model required")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.fg2)
+                Text("Download the on-device model (~600 MB)\nto start transcribing.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.fg3)
+                    .multilineTextAlignment(.center)
+                Button("Download Model") {
+                    Task { await transcriptionEngine?.downloadModels() }
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.accent1)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.accent1.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                if let error = transcriptionEngine?.lastError {
+                    Text(error)
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.recordRed)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
     }
 
     // MARK: - Empty State
@@ -234,7 +315,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(Color.bg1.opacity(0.7))
+        .background(.bar)
         .overlay(Divider(), alignment: .top)
         .overlay(Divider(), alignment: .bottom)
     }
@@ -297,6 +378,8 @@ struct ContentView: View {
             }
             activeSessionType = type
             detectedAppName = resolvedAppName
+            recordingState.isRecording = true
+            recordingState.isPaused = false
             if type == .callCapture {
                 await transcriptionEngine?.start(
                     locale: settings.locale,
@@ -312,11 +395,23 @@ struct ContentView: View {
         }
     }
 
+    private func pauseFromMenu() {
+        transcriptionEngine?.pause()
+        recordingState.isPaused = true
+    }
+
+    private func resumeFromMenu() {
+        transcriptionEngine?.resume()
+        recordingState.isPaused = false
+    }
+
     private func stopSession() {
         let wasCallCapture = activeSessionType == .callCapture
         activeSessionType = nil
         detectedAppName = nil
         silenceSeconds = 0
+        recordingState.isRecording = false
+        recordingState.isPaused = false
 
         Task {
             await transcriptionEngine?.stop()

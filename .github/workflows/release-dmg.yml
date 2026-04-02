@@ -24,7 +24,7 @@ jobs:
         run: |
           TAG="${{ github.event.release.tag_name }}"
           VERSION="${TAG#v}"
-          PLIST="Tome/Sources/Tome/Info.plist"
+          PLIST="Tome/Sources/Tome/Info.plist"   # Tome/ is the Swift package directory name
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$PLIST"
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$PLIST"
           echo "Set version to $VERSION"
@@ -93,15 +93,15 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Tome-dmg
-          path: dist/Tome.dmg
+          name: HushScribe-dmg
+          path: dist/HushScribe.dmg
 
       - name: Attach DMG to Release
         if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload ${{ github.event.release.tag_name }} dist/Tome.dmg --clobber
+          gh release upload ${{ github.event.release.tag_name }} dist/HushScribe.dmg --clobber
 
       - name: Sign DMG and update appcast
         if: github.event_name == 'release'
@@ -111,7 +111,7 @@ jobs:
         run: |
           TAG="${{ github.event.release.tag_name }}"
           VERSION="${TAG#v}"
-          DMG_PATH="dist/Tome.dmg"
+          DMG_PATH="dist/HushScribe.dmg"
 
           # Extract sign_update from Sparkle build artifacts
           SIGN_UPDATE=$(find Tome/.build/artifacts/sparkle -name "sign_update" -type f 2>/dev/null | head -1)
@@ -135,20 +135,20 @@ jobs:
           echo "EdDSA signature: $ED_SIGNATURE"
           echo "DMG length: $DMG_LENGTH"
 
-          DMG_URL="https://github.com/Gremble-io/Tome/releases/download/${TAG}/Tome.dmg"
+          DMG_URL="https://github.com/drcursor/HushScribe/releases/download/${TAG}/HushScribe.dmg"
           PUB_DATE=$(date -u +"%a, %d %b %Y %H:%M:%S %z")
 
           # Clone gh-pages branch
-          git clone --branch gh-pages --single-branch "https://x-access-token:${GH_TOKEN}@github.com/Gremble-io/Tome.git" /tmp/gh-pages
+          git clone --branch gh-pages --single-branch "https://x-access-token:${GH_TOKEN}@github.com/drcursor/HushScribe.git" /tmp/gh-pages
 
           # Generate appcast.xml
           cat > /tmp/gh-pages/appcast.xml <<APPCAST_EOF
           <?xml version="1.0" encoding="utf-8"?>
           <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
             <channel>
-              <title>Tome Updates</title>
-              <link>https://raw.githubusercontent.com/Gremble-io/Tome/gh-pages/appcast.xml</link>
-              <description>Most recent updates to Tome</description>
+              <title>HushScribe Updates</title>
+              <link>https://raw.githubusercontent.com/drcursor/HushScribe/gh-pages/appcast.xml</link>
+              <description>Most recent updates to HushScribe</description>
               <language>en</language>
               <item>
                 <title>Version ${VERSION}</title>

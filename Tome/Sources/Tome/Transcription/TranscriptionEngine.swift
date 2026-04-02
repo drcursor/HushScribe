@@ -4,11 +4,11 @@ import FluidAudio
 import Observation
 import os
 
-// Writes to /tmp/tome.log
+// Writes to /tmp/hushscribe.log
 func diagLog(_ msg: String) {
     #if DEBUG
     let line = "\(Date()): \(msg)\n"
-    let path = "/tmp/tome.log"
+    let path = "/tmp/hushscribe.log"
     if let fh = FileHandle(forWritingAtPath: path) {
         fh.seekToEndOfFile()
         fh.write(line.data(using: .utf8)!)
@@ -19,11 +19,19 @@ func diagLog(_ msg: String) {
     #endif
 }
 
+enum ModelDownloadState {
+    case needed
+    case downloading
+    case ready
+}
+
 /// Dual-stream mic + system audio transcription.
 @Observable
 @MainActor
 final class TranscriptionEngine {
     private(set) var isRunning = false
+    private(set) var isPaused = false
+    private(set) var modelDownloadState: ModelDownloadState
     var assetStatus: String = "Ready"
     var lastError: String?
 
@@ -41,7 +49,8 @@ final class TranscriptionEngine {
 
     /// Shared FluidAudio instances
     private var asrManager: AsrManager?
-    private var vadManager: VadManager?
+    private var micVadManager: VadManager?
+    private var sysVadManager: VadManager?
 
     /// Tracks the resolved mic device ID currently in use.
     private var currentMicDeviceID: AudioDeviceID = 0
@@ -54,6 +63,67 @@ final class TranscriptionEngine {
 
     init(transcriptStore: TranscriptStore) {
         self.transcriptStore = transcriptStore
+        let cacheDir = AsrModels.defaultCacheDirectory(for: .v3)
+        self.modelDownloadState = AsrModels.modelsExist(at: cacheDir, version: .v3) ? .ready : .needed
+    }
+
+    /// Download and cache models without starting a recording session.
+    func downloadModels() async {
+        guard modelDownloadState != .ready else { return }
+        modelDownloadState = .downloading
+        assetStatus = "Downloading multilingual model..."
+        diagLog("[ENGINE] downloading models on demand...")
+
+        // Step 1: Download files to disk. This is the only step that determines
+        // whether models are "downloaded" — in-memory loading is a separate concern.
+        do {
+            try await AsrModels.download(version: .v3, progressHandler: { [weak self] progress in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    switch progress.phase {
+                    case .listing:
+                        self.assetStatus = "Listing model files..."
+                    case .downloading:
+                        // fractionCompleted spans 0→0.5 during the download phase
+                        let pct = min(100, Int(progress.fractionCompleted * 200))
+                        self.assetStatus = "Downloading model... \(pct)%"
+                    case .compiling(let name):
+                        self.assetStatus = name.isEmpty ? "Compiling models..." : "Compiling \(name)..."
+                    }
+                }
+            })
+        } catch {
+            let msg = "Failed to download models: \(error.localizedDescription)"
+            diagLog("[ENGINE] \(msg)")
+            lastError = msg
+            modelDownloadState = .needed
+            assetStatus = "Ready"
+            return
+        }
+
+        // Step 2: Load into memory so the user can start recording immediately.
+        // If this fails, files are already on disk — mark ready and let start() retry.
+        diagLog("[ENGINE] models downloaded; loading into memory...")
+        do {
+            let models = try await AsrModels.loadFromCache(version: .v3)
+            assetStatus = "Initializing ASR..."
+            let asr = AsrManager(config: .default)
+            try await asr.loadModels(models)
+            self.asrManager = asr
+            assetStatus = "Loading VAD model..."
+            let micVad = try await VadManager()
+            self.micVadManager = micVad
+            let sysVad = try await VadManager(config: VadConfig(defaultThreshold: 0.92))
+            self.sysVadManager = sysVad
+            diagLog("[ENGINE] models loaded into memory")
+        } catch {
+            diagLog("[ENGINE] in-memory load failed after download: \(error.localizedDescription)")
+            // Don't surface as a hard error — files are on disk; start() will load them.
+        }
+
+        modelDownloadState = .ready
+        assetStatus = "Ready"
+        diagLog("[ENGINE] models downloaded and cached")
     }
 
     func start(locale: Locale, inputDeviceID: AudioDeviceID = 0, appBundleID: String? = nil) async {
@@ -65,33 +135,43 @@ final class TranscriptionEngine {
 
         isRunning = true
 
-        // 1. Load FluidAudio models
-        assetStatus = "Downloading multilingual model (first run)..."
-        diagLog("[ENGINE-1] loading FluidAudio ASR models...")
-        do {
-            let models = try await AsrModels.downloadAndLoad(version: .v3)
-            assetStatus = "Initializing ASR..."
-            let asr = AsrManager(config: .default)
-            try await asr.loadModels(models)
-            self.asrManager = asr
+        // Load models into memory if not already loaded (e.g. models were on disk from a prior run).
+        if asrManager == nil || micVadManager == nil || sysVadManager == nil {
+            guard modelDownloadState == .ready else {
+                lastError = "Models not downloaded. Please download the model first."
+                assetStatus = "Ready"
+                isRunning = false
+                return
+            }
+            assetStatus = "Loading models..."
+            diagLog("[ENGINE-1] loading FluidAudio ASR models from cache...")
+            do {
+                let models = try await AsrModels.downloadAndLoad(version: .v3)
+                assetStatus = "Initializing ASR..."
+                let asr = AsrManager(config: .default)
+                try await asr.loadModels(models)
+                self.asrManager = asr
 
-            assetStatus = "Loading VAD model..."
-            diagLog("[ENGINE-1b] loading VAD model...")
-            let vad = try await VadManager()
-            self.vadManager = vad
+                assetStatus = "Loading VAD model..."
+                diagLog("[ENGINE-1b] loading VAD model...")
+                let micVad = try await VadManager()
+                self.micVadManager = micVad
+                let sysVad = try await VadManager(config: VadConfig(defaultThreshold: 0.92))
+                self.sysVadManager = sysVad
 
-            assetStatus = "Models ready"
-            diagLog("[ENGINE-2] FluidAudio models loaded")
-        } catch {
-            let msg = "Failed to load models: \(error.localizedDescription)"
-            diagLog("[ENGINE-2-FAIL] \(msg)")
-            lastError = msg
-            assetStatus = "Ready"
-            isRunning = false
-            return
+                assetStatus = "Models ready"
+                diagLog("[ENGINE-2] FluidAudio models loaded from cache")
+            } catch {
+                let msg = "Failed to load models: \(error.localizedDescription)"
+                diagLog("[ENGINE-2-FAIL] \(msg)")
+                lastError = msg
+                assetStatus = "Ready"
+                isRunning = false
+                return
+            }
         }
 
-        guard let asrManager, let vadManager else { return }
+        guard let asrManager, let micVadManager, let sysVadManager else { return }
 
         // 2. Start mic capture
         userSelectedDeviceID = inputDeviceID
@@ -117,7 +197,7 @@ final class TranscriptionEngine {
         let store = transcriptStore
         let micTranscriber = StreamingTranscriber(
             asrManager: asrManager,
-            vadManager: vadManager,
+            vadManager: micVadManager,
             speaker: .you,
             audioSource: .microphone,
             onPartial: { text in
@@ -144,7 +224,7 @@ final class TranscriptionEngine {
         if let sysStream = sysStreams?.systemAudio {
             let sysTranscriber = StreamingTranscriber(
                 asrManager: asrManager,
-                vadManager: vadManager,
+                vadManager: sysVadManager,
                 speaker: .them,
                 audioSource: .system,
                 onPartial: { text in
@@ -178,7 +258,7 @@ final class TranscriptionEngine {
     /// Restart only the mic capture with a new device, keeping system audio and models intact.
     /// Pass the raw setting value (0 = system default, or a specific AudioDeviceID).
     func restartMic(inputDeviceID: AudioDeviceID) {
-        guard isRunning, let asrManager, let vadManager else { return }
+        guard isRunning, let asrManager, let micVadManager else { return }
 
         // Only update user selection when explicitly changed (not from OS listener)
         if inputDeviceID != 0 || userSelectedDeviceID != 0 {
@@ -204,7 +284,7 @@ final class TranscriptionEngine {
         let store = transcriptStore
         let micTranscriber = StreamingTranscriber(
             asrManager: asrManager,
-            vadManager: vadManager,
+            vadManager: micVadManager,
             speaker: .you,
             audioSource: .microphone,
             onPartial: { text in
@@ -295,6 +375,29 @@ final class TranscriptionEngine {
             assetStatus = "Ready"
             return false
         }
+    }
+
+    func pause() {
+        guard isRunning, !isPaused else { return }
+        micCapture.pause()
+        systemCapture.pause()
+        isPaused = true
+        assetStatus = "Paused"
+        diagLog("[ENGINE] paused")
+    }
+
+    func resume() {
+        guard isRunning, isPaused else { return }
+        do {
+            try micCapture.resume()
+        } catch {
+            lastError = "Failed to resume mic: \(error.localizedDescription)"
+            diagLog("[ENGINE] resume mic failed: \(error)")
+        }
+        systemCapture.resume()
+        isPaused = false
+        assetStatus = "Transcribing (Parakeet-TDT v3)"
+        diagLog("[ENGINE] resumed")
     }
 
     func stop() async {
