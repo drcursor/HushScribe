@@ -1,10 +1,8 @@
 import SwiftUI
 import CoreAudio
-import Sparkle
 
 struct SettingsView: View {
     @Bindable var settings: AppSettings
-    var updater: SPUUpdater
     @State private var inputDevices: [(id: AudioDeviceID, name: String)] = []
 
     var body: some View {
@@ -69,16 +67,21 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Section("Updates") {
-                Toggle("Automatically check for updates", isOn: Binding(
-                    get: { updater.automaticallyChecksForUpdates },
-                    set: { updater.automaticallyChecksForUpdates = $0 }
-                ))
-                .font(.system(size: 12))
+            Section("About") {
+                HStack {
+                    Text("Fork of")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    Link("Tome by Gremble-io", destination: URL(string: "https://github.com/Gremble-io/Tome")!)
+                        .font(.system(size: 12))
+                }
+                Text("HushScribe is maintained independently by drcursor.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
-        .frame(width: 450, height: 420)
+        .frame(width: 450, height: 440)
         .onAppear {
             inputDevices = MicCapture.availableInputDevices()
         }

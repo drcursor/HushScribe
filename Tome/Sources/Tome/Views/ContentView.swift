@@ -83,7 +83,6 @@ struct ContentView: View {
         }
         .frame(minWidth: 320, maxWidth: 320, minHeight: 400)
         .background(Color.bg0)
-        .preferredColorScheme(.dark)
         .overlay {
             if showOnboarding {
                 OnboardingView(isPresented: $showOnboarding)
@@ -98,6 +97,10 @@ struct ContentView: View {
         .task {
             if !hasCompletedOnboarding {
                 showOnboarding = true
+                // LSUIElement apps don't auto-activate; bring the window to front for onboarding.
+                NSApp.setActivationPolicy(.regular)
+                NSApp.activate(ignoringOtherApps: true)
+                NSApp.mainWindow?.makeKeyAndOrderFront(nil)
             }
             if transcriptionEngine == nil {
                 transcriptionEngine = TranscriptionEngine(transcriptStore: transcriptStore)
@@ -148,19 +151,19 @@ struct ContentView: View {
             }
         }
         // Menu bar action notifications
-        .onReceive(NotificationCenter.default.publisher(for: .tomeStartCallCapture)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .hushscribeStartCallCapture)) { _ in
             startSession(type: .callCapture)
         }
-        .onReceive(NotificationCenter.default.publisher(for: .tomeStartVoiceMemo)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .hushscribeStartVoiceMemo)) { _ in
             startSession(type: .voiceMemo)
         }
-        .onReceive(NotificationCenter.default.publisher(for: .tomeStopRecording)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .hushscribeStopRecording)) { _ in
             stopSession()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .tomePauseRecording)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .hushscribePauseRecording)) { _ in
             pauseFromMenu()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .tomeResumeRecording)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .hushscribeResumeRecording)) { _ in
             resumeFromMenu()
         }
         .onChange(of: settings.inputDeviceID) {
@@ -177,7 +180,7 @@ struct ContentView: View {
 
     private var topBar: some View {
         HStack(spacing: 0) {
-            Text("TOME")
+            Text("HUSHSCRIBE")
                 .font(.system(size: 14, weight: .heavy))
                 .tracking(3)
                 .foregroundStyle(Color.fg1)
@@ -201,7 +204,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 16)
         .frame(height: 44)
-        .background(Color.bg1.opacity(0.45))
+        .background(.bar)
         .overlay(Divider(), alignment: .bottom)
     }
 
@@ -312,7 +315,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(Color.bg1.opacity(0.7))
+        .background(.bar)
         .overlay(Divider(), alignment: .top)
         .overlay(Divider(), alignment: .bottom)
     }

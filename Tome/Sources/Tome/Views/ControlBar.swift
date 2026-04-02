@@ -86,9 +86,9 @@ struct ControlBar: View {
                             .font(.system(size: 14))
                             .foregroundStyle(Color.fg1)
                             .frame(width: 44, height: 44)
-                            .background(Color.bg1.opacity(0.7))
+                            .background(Color(NSColor.controlBackgroundColor))
                             .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06)))
+                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(NSColor.separatorColor)))
                     }
                     .buttonStyle(.plain)
                 }
@@ -121,9 +121,9 @@ struct ControlBar: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .padding(.horizontal, 8)
-                        .background(Color.bg1.opacity(0.7))
+                        .background(Color(NSColor.controlBackgroundColor))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06)))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(NSColor.separatorColor)))
                     }
                     .buttonStyle(.plain)
                     .disabled(!modelsReady)
@@ -145,9 +145,9 @@ struct ControlBar: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .padding(.horizontal, 8)
-                        .background(Color.bg1.opacity(0.7))
+                        .background(Color(NSColor.controlBackgroundColor))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06)))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(NSColor.separatorColor)))
                     }
                     .buttonStyle(.plain)
                     .disabled(!modelsReady)
@@ -157,7 +157,7 @@ struct ControlBar: View {
                 .padding(.vertical, 10)
             }
         }
-        .background(Color.bg1.opacity(0.45))
+        .background(.bar)
         .overlay(Divider(), alignment: .top)
     }
 

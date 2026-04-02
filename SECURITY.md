@@ -1,3 +1,3 @@
 # Security
 
-Report security issues to jason@gremble.io.
+Report security issues to jason@drcursor.io.
