@@ -2,6 +2,12 @@
 
 > **Fork note:** HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io). Changes merged from the upstream Tome repository are marked with `[upstream]` in this changelog.
 
+## [2.3.1] — 2026-04-03
+
+- Silence timeout countdown shown below waveform during recording; turns red at ≤30s; click to reset
+- Configurable silence timeout in Settings (30s–10m, default 2m)
+- README: added Differences compared to Tome, Planned Functionality sections
+
 ## [2.3.0] — 2026-04-03
 
 - [upstream] Post-session speaker naming UI — after diarization completes, a prompt lets you assign real names to each detected speaker, which are then rewritten into the transcript. Contributed by [0xLeathery](https://github.com/0xLeathery/Tome/tree/feature/speaker-naming).

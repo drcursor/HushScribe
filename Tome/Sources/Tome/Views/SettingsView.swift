@@ -59,6 +59,19 @@ struct SettingsView: View {
                 .font(.system(size: 12))
             }
 
+            Section("Recording") {
+                Stepper(
+                    "Silence timeout: \(formatTimeout(settings.silenceTimeoutSeconds))",
+                    value: $settings.silenceTimeoutSeconds,
+                    in: 30...600,
+                    step: 30
+                )
+                .font(.system(size: 12))
+                Text("Session stops automatically after this much silence. During a recording, click the countdown below the waveform to reset the timer.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Privacy") {
                 Toggle("Hide from screen sharing", isOn: $settings.hideFromScreenShare)
                     .font(.system(size: 12))
@@ -69,10 +82,16 @@ struct SettingsView: View {
 
 }
         .formStyle(.grouped)
-        .frame(width: 450, height: 360)
+        .frame(width: 450, height: 460)
         .onAppear {
             inputDevices = MicCapture.availableInputDevices()
         }
+    }
+
+    private func formatTimeout(_ seconds: Int) -> String {
+        let m = seconds / 60
+        let s = seconds % 60
+        return s == 0 ? "\(m)m" : "\(m)m \(s)s"
     }
 
     private func chooseFolder(message: String, onSelect: @escaping (String) -> Void) {
