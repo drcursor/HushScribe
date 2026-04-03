@@ -142,6 +142,10 @@ Alternatively, build from source (see [Build](#build) above) to avoid Gatekeeper
 
 HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io), which itself started from [OpenGranola](https://github.com/yazinsai/OpenGranola). Substantially rewritten from both.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+
 ## License
 
 [MIT](LICENSE)
