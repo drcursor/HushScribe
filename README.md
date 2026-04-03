@@ -27,7 +27,16 @@ HushScribe is a macOS app that captures meetings and voice memos, transcribes th
 
 ## Installing
 
-The current release of HushScribe is not code-signed. macOS will block it from opening by default. See the [Troubleshooting](#troubleshooting) section for steps to bypass Gatekeeper and install the app.
+**Via Homebrew (recommended):**
+
+```bash
+brew tap drcursor/hushscribe https://github.com/drcursor/HushScribe
+brew install --cask hushscribe
+```
+
+**Manual:** Download the DMG from the [latest release](https://github.com/drcursor/HushScribe/releases/latest) and drag HushScribe to `/Applications`.
+
+The current release is not code-signed. macOS will block it from opening by default. See the [Troubleshooting](#troubleshooting) section for steps to bypass Gatekeeper, or follow the instructions shown after installing via Homebrew.
 
 ## Background
 

@@ -9,6 +9,8 @@ cask "hushscribe" do
 
   depends_on macos: ">= :sequoia"
 
+  caveats "You must run xattr -d com.apple.quarantine /Applications/HushScribe.app so that macOS Gatekeeper unblocks the application from running."
+
   app "HushScribe.app"
 
   zap trash: [
