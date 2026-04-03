@@ -405,7 +405,7 @@ tags:
             lastSpeakersDetected.insert(realName)
         }
 
-        let tmpPath = filePath.deletingLastPathComponent().appendingPathComponent(".tome_rename_tmp.md")
+        let tmpPath = filePath.deletingLastPathComponent().appendingPathComponent(".hushscribe_rename_tmp.md")
         try? content.write(to: tmpPath, atomically: true, encoding: .utf8)
         try? FileManager.default.removeItem(at: filePath)
         try? FileManager.default.moveItem(at: tmpPath, to: filePath)
