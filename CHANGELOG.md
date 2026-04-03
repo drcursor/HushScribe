@@ -2,6 +2,17 @@
 
 > **Fork note:** HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io). Changes merged from the upstream Tome repository are marked with `[upstream]` in this changelog.
 
+## [2.3.0] — 2026-04-03
+
+- [upstream] Post-session speaker naming UI — after diarization completes, a prompt lets you assign real names to each detected speaker, which are then rewritten into the transcript. Contributed by [0xLeathery](https://github.com/0xLeathery/Tome/tree/feature/speaker-naming).
+- Menu bar integration: app hides dock icon when window is closed; dock icon reappears when window is shown
+- Status bar icon updated to pencil (feather pen theme); new app icon
+- Removed Sparkle auto-update system; updates distributed via GitHub releases
+- Added Settings and About HushScribe to menu bar menu
+- 80s-style segmented LED VU meter replaces smooth spectrum visualizer
+- Removed forced dark theme; app now follows macOS system appearance
+- Onboarding step added for menu bar usage
+
 ## [1.2.3] — 2026-04-02 (HushScribe rebrand)
 - Renamed project to HushScribe (fork of Tome by Gremble-io)
 - Replaced all user-visible references to Tome and gremble with HushScribe and drcursor
