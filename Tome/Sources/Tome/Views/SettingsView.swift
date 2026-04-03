@@ -67,21 +67,9 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Section("About") {
-                HStack {
-                    Text("Fork of")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                    Link("Tome by Gremble-io", destination: URL(string: "https://github.com/Gremble-io/Tome")!)
-                        .font(.system(size: 12))
-                }
-                Text("HushScribe is maintained independently by drcursor.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-        }
+}
         .formStyle(.grouped)
-        .frame(width: 450, height: 440)
+        .frame(width: 450, height: 360)
         .onAppear {
             inputDevices = MicCapture.availableInputDevices()
         }
