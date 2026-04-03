@@ -13,7 +13,8 @@
 
 ---
 
-> **HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome)**, substantially extended with additional features and a new name. See [Credits](#credits) for the original project.
+> **HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome)**, substantially extended with additional features and a new name. See [Credits](#credits) for the original project. All the information found below is sourced from the original Tome Project unless otherwise stated. I'm using this project as a way to test out using AI for modificating OpenSource software for my own use without doing any actual coding, as such most modifications to the original project found under this fork are made using Claude Code.
+Together with Gremble [we decided](https://github.com/Gremble-io/Tome/pull/13#issuecomment-4158040508) not to merge these changes to the main project so that he can keep full control over his codebase.
 
 HushScribe is a macOS app that captures meetings and voice memos, transcribes them locally with Parakeet-TDT v3, and drops structured `.md` files straight into your Obsidian vault. Everything runs on-device. Nothing phones home.
 
