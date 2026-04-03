@@ -78,7 +78,7 @@ struct SpeakerNamingView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 6)
-                                    .stroke(focusedField == label ? Color.accent1.opacity(0.4) : Color.white.opacity(0.06))
+                                    .stroke(focusedField == label ? Color.accent1.opacity(0.4) : Color(NSColor.separatorColor))
                             )
                             .onSubmit { advanceFocus(from: label) }
                     }
