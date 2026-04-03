@@ -197,11 +197,7 @@ Tome/Sources/Tome/
 
 **"HushScribe is damaged and can't be opened"**
 
-This is macOS Gatekeeper blocking an unsigned app. Until a signed release is available:
-
-1. Right-click (or Control-click) `HushScribe.app` in `/Applications`
-2. Click **Open**
-3. In the dialog, click **Open** again
+This is macOS Gatekeeper blocking an unsigned app. Until a signed release is available, run the following command on your terminal : 'xattr -d com.apple.quarantine /Applications/HushScribe.app'
 
 You only need to do this once — after that, HushScribe launches normally.
 
