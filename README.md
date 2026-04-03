@@ -19,8 +19,8 @@ Together with Gremble [we decided](https://github.com/Gremble-io/Tome/pull/13#is
 HushScribe is a macOS app that captures meetings and voice memos, transcribes them locally with Parakeet-TDT v3, and drops structured `.md` files straight into your Obsidian vault. Everything runs on-device. Nothing phones home.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Gremble-io/Tome/main/assets/screenshot-idle.png" width="350" alt="HushScribe — idle state" />
-  <img src="https://raw.githubusercontent.com/Gremble-io/Tome/main/assets/screenshot-recording.png" width="350" alt="HushScribe — recording with spectrum visualizer" />
+  <img src="assets/main.png" width="350" alt="HushScribe — main" />
+  <img src="assets/capturing.png" width="350" alt="HushScribe — capturing" />
 </p>
 
 ## Installing
@@ -84,11 +84,11 @@ HushScribe diverges from [Tome](https://github.com/Gremble-io/Tome) in the follo
 ## Output
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Gremble-io/Tome/main/assets/screenshot-vault-frontmatter.png?v=2" width="600" alt="Vault note with YAML frontmatter" />
+  <img src="assets/captured.png" width="600" alt="HushScribe — captured transcript" />
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Gremble-io/Tome/main/assets/screenshot-vault-transcript.png?v=2" width="600" alt="Vault note transcript view" />
+  <img src="assets/speakers.png" width="600" alt="HushScribe — speaker naming" />
 </p>
 
 ```markdown
