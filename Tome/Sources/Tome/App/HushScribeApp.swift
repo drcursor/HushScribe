@@ -66,12 +66,16 @@ struct MenuBarMenuView: View {
         Divider()
         Button(isWindowVisible ? "Hide HushScribe" : "Show HushScribe") {
             if isWindowVisible {
-                NSApp.windows.first { (w: NSWindow) in w.isVisible && !(w is NSPanel) && w.level == .normal }?.close()
+                NSApp.windows.first { (w: NSWindow) in w.isVisible && !(w is NSPanel) && w.level == .normal }?.orderOut(nil)
                 NSApp.setActivationPolicy(.accessory)
                 isWindowVisible = false
             } else {
                 NSApp.setActivationPolicy(.regular)
-                openWindow(id: "main")
+                if let existing = NSApp.windows.first(where: { (w: NSWindow) in !(w is NSPanel) && w.level == .normal }) {
+                    existing.makeKeyAndOrderFront(nil)
+                } else {
+                    openWindow(id: "main")
+                }
                 NSApp.activate(ignoringOtherApps: true)
                 isWindowVisible = true
             }
@@ -127,7 +131,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
         if hasCompletedOnboarding {
             DispatchQueue.main.async {
-                NSApp.windows.forEach { $0.close() }
+                NSApp.windows.forEach { $0.orderOut(nil) }
             }
         }
 
