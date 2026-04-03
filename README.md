@@ -23,6 +23,10 @@ HushScribe is a macOS app that captures meetings and voice memos, transcribes th
   <img src="https://raw.githubusercontent.com/Gremble-io/Tome/main/assets/screenshot-recording.png" width="350" alt="HushScribe — recording with spectrum visualizer" />
 </p>
 
+## Installing
+
+The current release of HushScribe is not code-signed. macOS will block it from opening by default. See the [Troubleshooting](#troubleshooting) section for steps to bypass Gatekeeper and install the app.
+
 ## Background
 
 I'm a consultant who fell down the Obsidian rabbit hole. I built out a vault as a second brain: structured notes with YAML frontmatter, backlinks, tags, and a Claude agent layer that processes everything. Client files, meeting notes, action items, daily briefs, all flowing through the vault automatically.
