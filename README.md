@@ -59,6 +59,28 @@ HushScribe does the first three. Your agent does the rest.
 - **Privacy.** Hidden from screen sharing by default. No audio saved. Transcripts only.
 - **Silence auto-stop.** 120 seconds of dead air and it stops itself.
 
+## Differences Compared to Tome
+
+HushScribe diverges from [Tome](https://github.com/Gremble-io/Tome) in the following ways:
+
+- **Menu bar app.** HushScribe lives in the menu bar with no dock icon by default. The main window is hidden on launch after the first run and can be shown via the "Show HushScribe" menu item. Tome always shows in the dock.
+- **Post-session speaker naming.** After diarization completes, HushScribe prompts you to assign real names to each detected speaker. Those names are rewritten into the transcript. (Contributed by [0xLeathery](https://github.com/0xLeathery/Tome/tree/feature/speaker-naming).)
+- **Silence timeout display and configuration.** A countdown is shown below the waveform during recording, turns red at ≤30 seconds, and can be reset by clicking it. The default timeout is configurable in Settings.
+- **80s-style segmented LED VU meter.** Replaced the smooth spectrum visualizer with a blocky green/yellow/red LED-segment meter.
+- **Follows macOS system appearance.** Removed the forced dark theme; the app adapts to Light or Dark mode.
+- **No auto-update system.** Sparkle has been removed. Updates are distributed manually via GitHub releases.
+- **Feather pen identity.** New app icon and pencil status bar symbol.
+- **Pause recording.** Recordings can be paused and resumed mid-session from both the main UI and the menu bar.
+- **Current input device display.** The active microphone is shown next to the session timer in the top bar.
+- **Alternative model download handling.** The model download is triggered from a dedicated prompt in the main UI on first run, rather than happening silently in the background.
+
+## Planned Functionality
+
+- Auto-detect meetings and start recording automatically
+- Support for alternative transcription models
+- Better transcript preview at end of session
+- Installation via brew
+
 ## Output
 
 <p align="center">

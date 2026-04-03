@@ -66,6 +66,11 @@ struct ContentView: View {
             // Waveform ribbon
             WaveformView(isRecording: isRunning, audioLevel: audioLevel)
 
+            // Silence timeout countdown
+            if isRunning && !(transcriptionEngine?.isPaused ?? false) {
+                silenceTimeoutDisplay
+            }
+
             // Glass control bar
             ControlBar(
                 isRecording: isRunning,
@@ -158,7 +163,7 @@ struct ContentView: View {
                 sessionElapsed += 1
                 if audioLevel < 0.01 {
                     silenceSeconds += 1
-                    if silenceSeconds >= 120 {
+                    if silenceSeconds >= settings.silenceTimeoutSeconds {
                         stopSession()
                     }
                 }
@@ -306,6 +311,25 @@ struct ContentView: View {
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Silence Timeout Display
+
+    private var silenceTimeoutDisplay: some View {
+        let remaining = max(0, settings.silenceTimeoutSeconds - silenceSeconds)
+        let isUrgent = remaining <= 30
+        let isActive = silenceSeconds > 0
+        return Button {
+            silenceSeconds = 0
+        } label: {
+            Text(formatTime(remaining))
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundStyle(isUrgent ? Color.red : (isActive ? Color.primary : Color.secondary))
+                .opacity(isActive ? 1.0 : 0.45)
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, 3)
     }
 
     // MARK: - Save Banner

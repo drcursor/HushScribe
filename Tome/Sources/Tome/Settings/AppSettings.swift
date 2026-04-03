@@ -28,6 +28,11 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(vaultVoicePath, forKey: "vaultVoicePath") }
     }
 
+    /// Seconds of silence before a session auto-stops. Default 120.
+    var silenceTimeoutSeconds: Int {
+        didSet { UserDefaults.standard.set(silenceTimeoutSeconds, forKey: "silenceTimeoutSeconds") }
+    }
+
     /// When true, all app windows are invisible to screen sharing / recording.
     var hideFromScreenShare: Bool {
         didSet {
@@ -40,6 +45,8 @@ final class AppSettings {
         let defaults = UserDefaults.standard
         self.transcriptionLocale = defaults.string(forKey: "transcriptionLocale") ?? "en-US"
         self.inputDeviceID = AudioDeviceID(defaults.integer(forKey: "inputDeviceID"))
+        let storedTimeout = defaults.integer(forKey: "silenceTimeoutSeconds")
+        self.silenceTimeoutSeconds = storedTimeout > 0 ? storedTimeout : 120
         self.vaultMeetingsPath = defaults.string(forKey: "vaultMeetingsPath") ?? NSString("~/Documents/HushScribe/Meetings").expandingTildeInPath
         self.vaultVoicePath = defaults.string(forKey: "vaultVoicePath") ?? NSString("~/Documents/HushScribe/Voice").expandingTildeInPath
         // Default to true (hidden) if key has never been set
