@@ -247,12 +247,12 @@ final class MicCapture: @unchecked Sendable {
                 mScope: kAudioObjectPropertyScopeGlobal,
                 mElement: kAudioObjectPropertyElementMain
             )
-            var name: CFString = "" as CFString
-            var nameSize = UInt32(MemoryLayout<CFString>.size)
+            var name: Unmanaged<CFString>? = nil
+            var nameSize = UInt32(MemoryLayout<Unmanaged<CFString>>.size)
             status = AudioObjectGetPropertyData(deviceID, &nameAddress, 0, nil, &nameSize, &name)
             guard status == noErr else { continue }
 
-            result.append((id: deviceID, name: name as String))
+            result.append((id: deviceID, name: (name?.takeRetainedValue() as String?) ?? ""))
         }
 
         return result
@@ -264,10 +264,10 @@ final class MicCapture: @unchecked Sendable {
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )
-        var uid: CFString = "" as CFString
-        var size = UInt32(MemoryLayout<CFString>.size)
+        var uid: Unmanaged<CFString>? = nil
+        var size = UInt32(MemoryLayout<Unmanaged<CFString>>.size)
         let status = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &uid)
-        return status == noErr ? uid as String : nil
+        return status == noErr ? uid?.takeRetainedValue() as String? : nil
     }
 
     static func deviceName(for deviceID: AudioDeviceID) -> String? {
@@ -276,10 +276,10 @@ final class MicCapture: @unchecked Sendable {
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )
-        var name: CFString = "" as CFString
-        var size = UInt32(MemoryLayout<CFString>.size)
+        var name: Unmanaged<CFString>? = nil
+        var size = UInt32(MemoryLayout<Unmanaged<CFString>>.size)
         let status = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &name)
-        return status == noErr ? name as String : nil
+        return status == noErr ? name?.takeRetainedValue() as String? : nil
     }
 
     static func defaultInputDeviceID() -> AudioDeviceID? {

@@ -189,13 +189,14 @@ final class StreamingTranscriber: @unchecked Sendable {
         ) else { return nil }
 
         var error: NSError?
-        var consumed = false
+        final class ConsumedFlag: @unchecked Sendable { var value = false }
+        let consumed = ConsumedFlag()
         converter.convert(to: outputBuffer, error: &error) { _, outStatus in
-            if consumed {
+            if consumed.value {
                 outStatus.pointee = .noDataNow
                 return nil
             }
-            consumed = true
+            consumed.value = true
             outStatus.pointee = .haveData
             return buffer
         }

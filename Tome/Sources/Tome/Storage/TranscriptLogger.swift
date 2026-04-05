@@ -411,6 +411,17 @@ tags:
         try? FileManager.default.moveItem(at: tmpPath, to: filePath)
     }
 
+    /// Insert an on-device summary section immediately before ## Transcript in the saved file.
+    func appendSummary(_ summary: String) {
+        guard let filePath = lastSessionFilePath else { return }
+        guard var content = try? String(contentsOf: filePath, encoding: .utf8) else { return }
+        let marker = "## Transcript"
+        guard let range = content.range(of: marker) else { return }
+        let section = "## Summary\n\n\(summary)\n\n---\n\n"
+        content.insert(contentsOf: section, at: range.lowerBound)
+        try? content.write(to: filePath, atomically: true, encoding: .utf8)
+    }
+
     private func labelForSpeaker(_ rawSpeaker: String) -> String {
         // "You" always maps to "You"
         if rawSpeaker.lowercased() == "you" { return "You" }

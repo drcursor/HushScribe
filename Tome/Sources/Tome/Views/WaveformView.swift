@@ -19,7 +19,7 @@ struct WaveformView: View {
                     HStack(spacing: 3) {
                         Button(action: onToggleMicMute) {
                             Image(systemName: isMicMuted ? "mic.slash.fill" : "mic.fill")
-                                .font(.system(size: 7))
+                                .font(.system(size: 10))
                                 .foregroundStyle(isMicMuted ? Color.red.opacity(0.8) : Color.fg3.opacity(0.5))
                         }
                         .buttonStyle(.plain)
@@ -42,7 +42,7 @@ struct WaveformView: View {
                     HStack(spacing: 3) {
                         Button(action: onToggleSysMute) {
                             Image(systemName: isSysMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                                .font(.system(size: 7))
+                                .font(.system(size: 10))
                                 .foregroundStyle(isSysMuted ? Color.red.opacity(0.8) : Color.fg3.opacity(0.5))
                         }
                         .buttonStyle(.plain)

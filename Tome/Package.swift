@@ -17,7 +17,7 @@ let package = Package(
                 .product(name: "WhisperKit", package: "WhisperKit"),
             ],
             path: "Sources/Tome",
-            exclude: ["Info.plist", "HushScribe.entitlements", "Assets"]
+            exclude: ["Info.plist", "HushScribe.entitlements", "Assets", "todo.md"]
         ),
     ]
 )
