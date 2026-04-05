@@ -66,7 +66,15 @@ struct ContentView: View {
             }
 
             // Waveform ribbon
-            WaveformView(isRecording: isRunning, micLevel: micLevel, sysLevel: sysLevel)
+            WaveformView(
+                isRecording: isRunning,
+                micLevel: micLevel,
+                sysLevel: sysLevel,
+                isMicMuted: transcriptionEngine?.isMicMuted ?? false,
+                isSysMuted: transcriptionEngine?.isSysMuted ?? false,
+                onToggleMicMute: { transcriptionEngine?.isMicMuted.toggle() },
+                onToggleSysMute: { transcriptionEngine?.isSysMuted.toggle() }
+            )
 
             // Silence timeout countdown
             if isRunning && !(transcriptionEngine?.isPaused ?? false) {

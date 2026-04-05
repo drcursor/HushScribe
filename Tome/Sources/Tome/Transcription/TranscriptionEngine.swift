@@ -44,6 +44,16 @@ final class TranscriptionEngine {
     var micAudioLevel: Float { micCapture.audioLevel }
     var sysAudioLevel: Float { systemCapture.audioLevel }
 
+    /// Mute controls — silences the respective audio stream.
+    var isMicMuted: Bool {
+        get { micCapture.isMuted }
+        set { micCapture.isMuted = newValue }
+    }
+    var isSysMuted: Bool {
+        get { systemCapture.isMuted }
+        set { systemCapture.isMuted = newValue }
+    }
+
     /// Combined level used for silence detection.
     var audioLevel: Float { max(micCapture.audioLevel, systemCapture.audioLevel) }
 
