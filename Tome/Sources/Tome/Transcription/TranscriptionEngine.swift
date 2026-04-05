@@ -40,7 +40,11 @@ final class TranscriptionEngine {
     private let micCapture = MicCapture()
     private let transcriptStore: TranscriptStore
 
-    /// Combined audio level from mic and system for the UI meter.
+    /// Individual audio levels for the split VU meter.
+    var micAudioLevel: Float { micCapture.audioLevel }
+    var sysAudioLevel: Float { systemCapture.audioLevel }
+
+    /// Combined level used for silence detection.
     var audioLevel: Float { max(micCapture.audioLevel, systemCapture.audioLevel) }
 
     private var micTask: Task<Void, Never>?

@@ -2,13 +2,38 @@ import SwiftUI
 
 struct WaveformView: View {
     let isRecording: Bool
-    let audioLevel: Float
+    let micLevel: Float
+    let sysLevel: Float
 
     var body: some View {
         if isRecording {
-            VUMeter(audioLevel: audioLevel)
-                .frame(height: 28)
-                .clipped()
+            HStack(spacing: 0) {
+                // Mic meter
+                VStack(spacing: 3) {
+                    VUMeter(audioLevel: micLevel, barCount: 13)
+                        .frame(height: 28)
+                    Text("MIC")
+                        .font(.system(size: 8, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Color.fg3.opacity(0.6))
+                }
+
+                // Divider
+                Rectangle()
+                    .fill(Color.fg2.opacity(0.15))
+                    .frame(width: 1)
+                    .padding(.bottom, 14)
+                    .padding(.horizontal, 4)
+
+                // System audio meter
+                VStack(spacing: 3) {
+                    VUMeter(audioLevel: sysLevel, barCount: 13)
+                        .frame(height: 28)
+                    Text("SYSTEM")
+                        .font(.system(size: 8, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Color.fg3.opacity(0.6))
+                }
+            }
+            .clipped()
         } else {
             Rectangle()
                 .fill(Color.fg2.opacity(0.35))
@@ -19,13 +44,14 @@ struct WaveformView: View {
     }
 }
 
-private let barCount = 28
 private let segmentCount = 5
 
 // Bell curve weights — center bars taller, edges shorter
-private let positionCurve: [Float] = (0..<barCount).map { i in
-    let x = (Float(i) - Float(barCount - 1) / 2) / (Float(barCount) / 4)
-    return exp(-x * x / 2)
+private func positionCurve(barCount: Int) -> [Float] {
+    (0..<barCount).map { i in
+        let x = (Float(i) - Float(barCount - 1) / 2) / (Float(barCount) / 4)
+        return exp(-x * x / 2)
+    }
 }
 
 // Color per segment index (0 = top, segmentCount-1 = bottom)
@@ -41,35 +67,41 @@ private func segmentColor(index: Int) -> Color {
 
 private struct VUMeter: View {
     let audioLevel: Float
+    let barCount: Int
 
     @State private var barOffsets: [Float] = []
-    @State private var barHeights: [CGFloat] = Array(repeating: 0, count: barCount)
-    @State private var peakSegments: [Int] = Array(repeating: -1, count: barCount)
-    @State private var peakTimers: [Int] = Array(repeating: 0, count: barCount)
+    @State private var barHeights: [CGFloat] = []
+    @State private var peakSegments: [Int] = []
+    @State private var peakTimers: [Int] = []
 
     private var glowLevel: CGFloat { CGFloat(min(audioLevel * 1.4, 1.0)) }
 
     var body: some View {
         HStack(spacing: 2) {
             ForEach(0..<barCount, id: \.self) { i in
-                VStack(spacing: 1) {
-                    ForEach(0..<segmentCount, id: \.self) { seg in
-                        let litCount = Int((barHeights[i] / 13.0) * CGFloat(segmentCount) + 0.5)
-                        let isLit = (segmentCount - 1 - seg) < litCount
-                        let isPeak = peakSegments[i] == seg
-                        let color = segmentColor(index: seg)
-                        Rectangle()
-                            .fill(isLit || isPeak ? color : color.opacity(0.08))
-                            .frame(height: 4)
+                if i < barHeights.count {
+                    VStack(spacing: 1) {
+                        ForEach(0..<segmentCount, id: \.self) { seg in
+                            let litCount = Int((barHeights[i] / 13.0) * CGFloat(segmentCount) + 0.5)
+                            let isLit = (segmentCount - 1 - seg) < litCount
+                            let isPeak = peakSegments[i] == seg
+                            let color = segmentColor(index: seg)
+                            Rectangle()
+                                .fill(isLit || isPeak ? color : color.opacity(0.08))
+                                .frame(height: 4)
+                        }
                     }
                 }
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 8)
         .drawingGroup()
         .shadow(color: Color(red: 0.05, green: 0.92, blue: 0.22).opacity(glowLevel * 0.5), radius: glowLevel * 6)
         .onAppear {
             barOffsets = (0..<barCount).map { _ in Float.random(in: -0.12...0.12) }
+            barHeights = Array(repeating: 0, count: barCount)
+            peakSegments = Array(repeating: -1, count: barCount)
+            peakTimers = Array(repeating: 0, count: barCount)
         }
         .onChange(of: audioLevel) {
             updateBars()
@@ -77,7 +109,9 @@ private struct VUMeter: View {
     }
 
     private func updateBars() {
+        guard barHeights.count == barCount else { return }
         let level = CGFloat(audioLevel)
+        let curve = positionCurve(barCount: barCount)
 
         for i in 0..<barCount {
             barOffsets[i] = Float.random(in: -0.12...0.12)
@@ -85,12 +119,11 @@ private struct VUMeter: View {
 
         var newHeights = [CGFloat](repeating: 0, count: barCount)
         for i in 0..<barCount {
-            let curve = CGFloat(positionCurve[i])
+            let c = CGFloat(curve[i])
             let jitter = CGFloat(1.0 + barOffsets[i])
-            newHeights[i] = level * curve * jitter * 13
+            newHeights[i] = level * c * jitter * 13
         }
 
-        // Peak hold per bar (as segment index from top)
         var newPeaks = peakSegments
         var newTimers = peakTimers
         for i in 0..<barCount {
