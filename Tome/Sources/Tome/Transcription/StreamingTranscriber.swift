@@ -4,7 +4,7 @@ import os
 
 // VAD + ASR pipeline
 final class StreamingTranscriber: @unchecked Sendable {
-    private let asrManager: AsrManager
+    private let asrBackend: any ASRBackend
     private let vadManager: VadManager
     private let speaker: Speaker
     private let audioSource: AudioSource
@@ -22,14 +22,14 @@ final class StreamingTranscriber: @unchecked Sendable {
     )!
 
     init(
-        asrManager: AsrManager,
+        asrBackend: any ASRBackend,
         vadManager: VadManager,
         speaker: Speaker,
         audioSource: AudioSource = .microphone,
         onPartial: @escaping @Sendable (String) -> Void,
         onFinal: @escaping @Sendable (String) -> Void
     ) {
-        self.asrManager = asrManager
+        self.asrBackend = asrBackend
         self.vadManager = vadManager
         self.speaker = speaker
         self.audioSource = audioSource
@@ -143,11 +143,11 @@ final class StreamingTranscriber: @unchecked Sendable {
     /// Returns `true` on success, `false` on ASR error.
     private func transcribeSegment(_ samples: [Float]) async -> Bool {
         do {
-            let result = try await asrManager.transcribe(samples, source: audioSource)
-            let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !text.isEmpty else { return true }
-            log.info("[\(self.speaker.rawValue)] transcribed: \(text.prefix(80))")
-            onFinal(text)
+            let text = try await asrBackend.transcribe(samples, source: audioSource)
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return true }
+            log.info("[\(self.speaker.rawValue)] transcribed: \(trimmed.prefix(80))")
+            onFinal(trimmed)
             return true
         } catch {
             log.error("ASR error: \(error.localizedDescription)")
