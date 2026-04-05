@@ -43,10 +43,10 @@ The current release is not code-signed. macOS will block it from opening by defa
 
 ## Why HushScribe?
 
-- **Entirely local.** All transcription models run on Apple Silicon. The AI summary uses Apple's on-device NaturalLanguage framework. Nothing leaves your machine — ever.
-- **Plain markdown output.** YAML frontmatter, tags, timestamps, speaker labels. Lands in your vault ready to process. No proprietary format, no export step.
-- **Built for agent workflows.** HushScribe is the capture layer. It transcribes and writes the `.md`; your agent or automation picks it up and does the rest.
-- **No accounts, no subscriptions.** No sign-up, no API keys, no cloud dependency.
+- **Entirely local.** Transcription and AI summary both run on-device — Parakeet, WhisperKit, Apple Speech, and Apple's NaturalLanguage framework. Nothing leaves your machine.
+- **Your data, your format.** Output is plain `.md` with YAML frontmatter, timestamps, and speaker labels. No proprietary export, no lock-in, no copy-paste.
+- **Designed for automation.** HushScribe is the capture layer. Once the file is in your vault, your agent, script, or workflow takes over.
+- **No accounts, no subscriptions, no API keys.** Download and run.
 
 ```
 speak → capture → vault → agent → knowledge base
@@ -84,8 +84,8 @@ HushScribe diverges from [Tome](https://github.com/Gremble-io/Tome) in the follo
 ## Planned Functionality
 
 - Auto-detect meetings and start recording automatically
-- Better model handling
-- Bettery summarisation
+- Improved model selection and management in Settings
+- Improved on-device summarisation
 
 ## Output
 
