@@ -155,36 +155,32 @@ final class TranscriptionEngine {
 
         isRunning = true
 
-        // Load VAD managers if needed (shared across both ASR backends).
-        if micVadManager == nil || sysVadManager == nil {
-            assetStatus = "Loading VAD model..."
-            diagLog("[ENGINE-1b] loading VAD model...")
-            do {
-                let micVad = try await VadManager()
-                self.micVadManager = micVad
-                let sysVad = try await VadManager(config: VadConfig(defaultThreshold: 0.92))
-                self.sysVadManager = sysVad
-            } catch {
-                let msg = "Failed to load VAD: \(error.localizedDescription)"
-                diagLog("[ENGINE-2-FAIL] \(msg)")
-                lastError = msg
-                assetStatus = "Ready"
-                isRunning = false
-                return
-            }
-        }
-
-        // Load ASR backend based on selected model.
+        // Load ASR backend and VAD managers based on selected model.
         let asrBackend: any ASRBackend
         if selectedModel.isWhisperKit {
-            if let existing = whisperKitBackend {
-                asrBackend = existing
-            } else {
-                guard let modelID = selectedModel.whisperModelID else {
-                    lastError = "Invalid WhisperKit model ID."
+            // WhisperKit path: load VAD first (independent of FluidAudio model bundle),
+            // then load WhisperKit.
+            if micVadManager == nil || sysVadManager == nil {
+                assetStatus = "Loading VAD model..."
+                diagLog("[ENGINE-1b] loading VAD model...")
+                do {
+                    let micVad = try await VadManager()
+                    self.micVadManager = micVad
+                    let sysVad = try await VadManager(config: VadConfig(defaultThreshold: 0.92))
+                    self.sysVadManager = sysVad
+                } catch {
+                    let msg = "Failed to load VAD: \(error.localizedDescription)"
+                    diagLog("[ENGINE-VAD-FAIL] \(msg)")
+                    lastError = msg
+                    assetStatus = "Ready"
                     isRunning = false
                     return
                 }
+            }
+            if let existing = whisperKitBackend {
+                asrBackend = existing
+            } else {
+                let modelID = selectedModel.whisperModelID!
                 assetStatus = "Downloading \(selectedModel.displayName)..."
                 diagLog("[ENGINE-WK] loading WhisperKit model \(modelID)...")
                 do {
@@ -202,9 +198,9 @@ final class TranscriptionEngine {
                 }
             }
         } else {
-            if let existing = asrManager {
-                asrBackend = FluidAudioASRBackend(manager: existing)
-            } else {
+            // Parakeet path: preserve the original loading order — ASR first, then VAD.
+            // VadManager depends on the FluidAudio model bundle being available.
+            if asrManager == nil || micVadManager == nil || sysVadManager == nil {
                 guard modelDownloadState == .ready else {
                     lastError = "Models not downloaded. Please download the model first."
                     assetStatus = "Ready"
@@ -219,7 +215,14 @@ final class TranscriptionEngine {
                     let asr = AsrManager(config: .default)
                     try await asr.loadModels(models)
                     self.asrManager = asr
-                    asrBackend = FluidAudioASRBackend(manager: asr)
+
+                    assetStatus = "Loading VAD model..."
+                    diagLog("[ENGINE-1b] loading VAD model...")
+                    let micVad = try await VadManager()
+                    self.micVadManager = micVad
+                    let sysVad = try await VadManager(config: VadConfig(defaultThreshold: 0.92))
+                    self.sysVadManager = sysVad
+
                     assetStatus = "Models ready"
                     diagLog("[ENGINE-2] FluidAudio models loaded from cache")
                 } catch {
@@ -231,6 +234,8 @@ final class TranscriptionEngine {
                     return
                 }
             }
+            guard let asr = asrManager else { return }
+            asrBackend = FluidAudioASRBackend(manager: asr)
         }
 
         guard let micVadManager, let sysVadManager else { return }
