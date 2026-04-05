@@ -129,7 +129,9 @@ struct ContentView: View {
                 NSApp.mainWindow?.makeKeyAndOrderFront(nil)
             }
             if transcriptionEngine == nil {
-                transcriptionEngine = TranscriptionEngine(transcriptStore: transcriptStore)
+                let engine = TranscriptionEngine(transcriptStore: transcriptStore)
+                engine.setModel(settings.transcriptionModel)
+                transcriptionEngine = engine
             }
         }
         // Audio level polling
@@ -196,6 +198,9 @@ struct ContentView: View {
             if isRunning {
                 transcriptionEngine?.restartMic(inputDeviceID: settings.inputDeviceID)
             }
+        }
+        .onChange(of: settings.transcriptionModel) {
+            transcriptionEngine?.setModel(settings.transcriptionModel)
         }
         .onChange(of: transcriptStore.utterances.count) {
             handleNewUtterance()

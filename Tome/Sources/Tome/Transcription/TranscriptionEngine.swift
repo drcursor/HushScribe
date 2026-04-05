@@ -2,6 +2,7 @@ import AVFoundation
 import CoreAudio
 import FluidAudio
 import Observation
+import WhisperKit
 import os
 
 // Writes to /tmp/hushscribe.log
@@ -47,10 +48,19 @@ final class TranscriptionEngine {
     /// Keeps the mic stream alive for the audio level meter when transcription isn't running.
     private var micKeepAliveTask: Task<Void, Never>?
 
+    /// The selected transcription model. Update via setModel() between sessions.
+    private(set) var selectedModel: TranscriptionModel = .parakeet
+
     /// Shared FluidAudio instances
     private var asrManager: AsrManager?
     private var micVadManager: VadManager?
     private var sysVadManager: VadManager?
+
+    /// WhisperKit backend (loaded on demand when WhisperKit model is selected).
+    private var whisperKitBackend: WhisperKitASRBackend?
+
+    /// Apple Speech backend (loaded on demand).
+    private var sfSpeechBackend: SFSpeechBackend?
 
     /// Tracks the resolved mic device ID currently in use.
     private var currentMicDeviceID: AudioDeviceID = 0
@@ -126,6 +136,16 @@ final class TranscriptionEngine {
         diagLog("[ENGINE] models downloaded and cached")
     }
 
+    /// Switch the active model. Must be called while a session is not running.
+    func setModel(_ model: TranscriptionModel) {
+        guard !isRunning else { return }
+        selectedModel = model
+        // Clear backends that don't match the new model so they reload on next start().
+        if !model.isWhisperKit { whisperKitBackend = nil }
+        if !model.isAppleSpeech { sfSpeechBackend = nil }
+        if model.isWhisperKit || model.isAppleSpeech { asrManager = nil }
+    }
+
     func start(locale: Locale, inputDeviceID: AudioDeviceID = 0, appBundleID: String? = nil) async {
         diagLog("[ENGINE-0] start() called, isRunning=\(isRunning)")
         guard !isRunning else { return }
@@ -135,43 +155,133 @@ final class TranscriptionEngine {
 
         isRunning = true
 
-        // Load models into memory if not already loaded (e.g. models were on disk from a prior run).
-        if asrManager == nil || micVadManager == nil || sysVadManager == nil {
-            guard modelDownloadState == .ready else {
-                lastError = "Models not downloaded. Please download the model first."
-                assetStatus = "Ready"
-                isRunning = false
-                return
-            }
-            assetStatus = "Loading models..."
-            diagLog("[ENGINE-1] loading FluidAudio ASR models from cache...")
-            do {
-                let models = try await AsrModels.downloadAndLoad(version: .v3)
-                assetStatus = "Initializing ASR..."
-                let asr = AsrManager(config: .default)
-                try await asr.loadModels(models)
-                self.asrManager = asr
-
+        // Load ASR backend and VAD managers based on selected model.
+        let asrBackend: any ASRBackend
+        if selectedModel.isWhisperKit {
+            // WhisperKit path: load VAD first (independent of FluidAudio model bundle),
+            // then load WhisperKit.
+            if micVadManager == nil || sysVadManager == nil {
                 assetStatus = "Loading VAD model..."
                 diagLog("[ENGINE-1b] loading VAD model...")
-                let micVad = try await VadManager()
-                self.micVadManager = micVad
-                let sysVad = try await VadManager(config: VadConfig(defaultThreshold: 0.92))
-                self.sysVadManager = sysVad
-
-                assetStatus = "Models ready"
-                diagLog("[ENGINE-2] FluidAudio models loaded from cache")
-            } catch {
-                let msg = "Failed to load models: \(error.localizedDescription)"
-                diagLog("[ENGINE-2-FAIL] \(msg)")
-                lastError = msg
+                do {
+                    let micVad = try await VadManager()
+                    self.micVadManager = micVad
+                    let sysVad = try await VadManager(config: VadConfig(defaultThreshold: 0.92))
+                    self.sysVadManager = sysVad
+                } catch {
+                    let msg = "Failed to load VAD: \(error.localizedDescription)"
+                    diagLog("[ENGINE-VAD-FAIL] \(msg)")
+                    lastError = msg
+                    assetStatus = "Ready"
+                    isRunning = false
+                    return
+                }
+            }
+            if let existing = whisperKitBackend {
+                asrBackend = existing
+            } else {
+                let modelID = selectedModel.whisperModelID!
+                assetStatus = "Downloading \(selectedModel.displayName)..."
+                diagLog("[ENGINE-WK] loading WhisperKit model \(modelID)...")
+                do {
+                    let wk = try await WhisperKit(model: modelID)
+                    let backend = WhisperKitASRBackend(wk)
+                    self.whisperKitBackend = backend
+                    asrBackend = backend
+                } catch {
+                    let msg = "Failed to load WhisperKit: \(error.localizedDescription)"
+                    diagLog("[ENGINE-WK-FAIL] \(msg)")
+                    lastError = msg
+                    assetStatus = "Ready"
+                    isRunning = false
+                    return
+                }
+            }
+        } else if selectedModel.isAppleSpeech {
+            // Apple Speech path: request authorization, load VAD independently, then init recognizer.
+            let authorized = await SFSpeechBackend.requestAuthorization()
+            guard authorized else {
+                lastError = "Speech recognition permission denied. Enable it in System Settings > Privacy & Security > Speech Recognition."
                 assetStatus = "Ready"
                 isRunning = false
                 return
             }
+            if micVadManager == nil || sysVadManager == nil {
+                assetStatus = "Loading VAD model..."
+                diagLog("[ENGINE-1b] loading VAD model...")
+                do {
+                    let micVad = try await VadManager()
+                    self.micVadManager = micVad
+                    let sysVad = try await VadManager(config: VadConfig(defaultThreshold: 0.92))
+                    self.sysVadManager = sysVad
+                } catch {
+                    let msg = "Failed to load VAD: \(error.localizedDescription)"
+                    diagLog("[ENGINE-VAD-FAIL] \(msg)")
+                    lastError = msg
+                    assetStatus = "Ready"
+                    isRunning = false
+                    return
+                }
+            }
+            if let existing = sfSpeechBackend {
+                asrBackend = existing
+            } else {
+                diagLog("[ENGINE-SF] initializing Apple Speech recognizer...")
+                do {
+                    let backend = try SFSpeechBackend(locale: locale)
+                    self.sfSpeechBackend = backend
+                    asrBackend = backend
+                } catch {
+                    let msg = "Failed to initialize Apple Speech: \(error.localizedDescription)"
+                    diagLog("[ENGINE-SF-FAIL] \(msg)")
+                    lastError = msg
+                    assetStatus = "Ready"
+                    isRunning = false
+                    return
+                }
+            }
+        } else {
+            // Parakeet path: preserve the original loading order — ASR first, then VAD.
+            // VadManager depends on the FluidAudio model bundle being available.
+            if asrManager == nil || micVadManager == nil || sysVadManager == nil {
+                guard modelDownloadState == .ready else {
+                    lastError = "Models not downloaded. Please download the model first."
+                    assetStatus = "Ready"
+                    isRunning = false
+                    return
+                }
+                assetStatus = "Loading models..."
+                diagLog("[ENGINE-1] loading FluidAudio ASR models from cache...")
+                do {
+                    let models = try await AsrModels.downloadAndLoad(version: .v3)
+                    assetStatus = "Initializing ASR..."
+                    let asr = AsrManager(config: .default)
+                    try await asr.loadModels(models)
+                    self.asrManager = asr
+
+                    assetStatus = "Loading VAD model..."
+                    diagLog("[ENGINE-1b] loading VAD model...")
+                    let micVad = try await VadManager()
+                    self.micVadManager = micVad
+                    let sysVad = try await VadManager(config: VadConfig(defaultThreshold: 0.92))
+                    self.sysVadManager = sysVad
+
+                    assetStatus = "Models ready"
+                    diagLog("[ENGINE-2] FluidAudio models loaded from cache")
+                } catch {
+                    let msg = "Failed to load models: \(error.localizedDescription)"
+                    diagLog("[ENGINE-2-FAIL] \(msg)")
+                    lastError = msg
+                    assetStatus = "Ready"
+                    isRunning = false
+                    return
+                }
+            }
+            guard let asr = asrManager else { return }
+            asrBackend = FluidAudioASRBackend(manager: asr)
         }
 
-        guard let asrManager, let micVadManager, let sysVadManager else { return }
+        guard let micVadManager, let sysVadManager else { return }
 
         // 2. Start mic capture
         userSelectedDeviceID = inputDeviceID
@@ -196,7 +306,7 @@ final class TranscriptionEngine {
         // 4. Start mic transcription
         let store = transcriptStore
         let micTranscriber = StreamingTranscriber(
-            asrManager: asrManager,
+            asrBackend: asrBackend,
             vadManager: micVadManager,
             speaker: .you,
             audioSource: .microphone,
@@ -223,7 +333,7 @@ final class TranscriptionEngine {
         // 5. Start system audio transcription
         if let sysStream = sysStreams?.systemAudio {
             let sysTranscriber = StreamingTranscriber(
-                asrManager: asrManager,
+                asrBackend: asrBackend,
                 vadManager: sysVadManager,
                 speaker: .them,
                 audioSource: .system,
@@ -248,7 +358,7 @@ final class TranscriptionEngine {
             }
         }
 
-        assetStatus = "Transcribing (Parakeet-TDT v3)"
+        assetStatus = "Transcribing (\(selectedModel.displayName))"
         diagLog("[ENGINE-6] all transcription tasks started")
 
         // Install CoreAudio listener for default input device changes
@@ -258,7 +368,17 @@ final class TranscriptionEngine {
     /// Restart only the mic capture with a new device, keeping system audio and models intact.
     /// Pass the raw setting value (0 = system default, or a specific AudioDeviceID).
     func restartMic(inputDeviceID: AudioDeviceID) {
-        guard isRunning, let asrManager, let micVadManager else { return }
+        guard isRunning, let micVadManager else { return }
+        let backend: any ASRBackend
+        if selectedModel.isWhisperKit, let wk = whisperKitBackend {
+            backend = wk
+        } else if selectedModel.isAppleSpeech, let sf = sfSpeechBackend {
+            backend = sf
+        } else if let asr = asrManager {
+            backend = FluidAudioASRBackend(manager: asr)
+        } else {
+            return
+        }
 
         // Only update user selection when explicitly changed (not from OS listener)
         if inputDeviceID != 0 || userSelectedDeviceID != 0 {
@@ -283,7 +403,7 @@ final class TranscriptionEngine {
         let micStream = micCapture.bufferStream(deviceID: targetMicID)
         let store = transcriptStore
         let micTranscriber = StreamingTranscriber(
-            asrManager: asrManager,
+            asrBackend: backend,
             vadManager: micVadManager,
             speaker: .you,
             audioSource: .microphone,
@@ -396,7 +516,7 @@ final class TranscriptionEngine {
         }
         systemCapture.resume()
         isPaused = false
-        assetStatus = "Transcribing (Parakeet-TDT v3)"
+        assetStatus = "Transcribing (\(selectedModel.displayName))"
         diagLog("[ENGINE] resumed")
     }
 
