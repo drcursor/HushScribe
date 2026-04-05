@@ -2,6 +2,10 @@
 
 > **Fork note:** HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io). Changes merged from the upstream Tome repository are marked with `[upstream]` in this changelog.
 
+## [2.5.0] — 2026-04-05
+
+- **Mute controls.** Each VU meter panel now has a small mute toggle button next to its label. Mic mute silences the microphone channel; System mute silences system audio. The icon turns red when muted and the corresponding meter goes dark. Muting suppresses both the audio level display and transcription for that stream.
+
 ## [2.4.1] — 2026-04-05
 
 - **Split VU meter.** The waveform display is now divided into two panels — "Mic" on the left and "System" on the right — each with its own level, peak hold, and glow. Gives a live visual of what each audio stream is capturing.
