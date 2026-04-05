@@ -168,6 +168,7 @@ final class TranscriptionEngine {
         guard await ensureMicrophonePermission() else { return }
 
         isRunning = true
+        isPaused = false
 
         // Load ASR backend and VAD managers based on selected model.
         let asrBackend: any ASRBackend
