@@ -8,6 +8,30 @@ enum SessionType: String {
     case voiceMemo
 }
 
+enum TranscriptionModel: String, CaseIterable {
+    case parakeet = "parakeet"
+    case whisperBase = "whisperBase"
+    case whisperLargeV3 = "whisperLargeV3"
+
+    var displayName: String {
+        switch self {
+        case .parakeet: return "Parakeet-TDT v3 (Multilingual)"
+        case .whisperBase: return "Whisper Base"
+        case .whisperLargeV3: return "Whisper Large v3"
+        }
+    }
+
+    var whisperModelID: String? {
+        switch self {
+        case .parakeet: return nil
+        case .whisperBase: return "openai_whisper-base"
+        case .whisperLargeV3: return "openai_whisper-large-v3"
+        }
+    }
+
+    var isWhisperKit: Bool { whisperModelID != nil }
+}
+
 @Observable
 @MainActor
 final class AppSettings {
@@ -33,6 +57,11 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(silenceTimeoutSeconds, forKey: "silenceTimeoutSeconds") }
     }
 
+    /// Which ASR model to use for transcription.
+    var transcriptionModel: TranscriptionModel {
+        didSet { UserDefaults.standard.set(transcriptionModel.rawValue, forKey: "transcriptionModel") }
+    }
+
     /// When true, all app windows are invisible to screen sharing / recording.
     var hideFromScreenShare: Bool {
         didSet {
@@ -47,6 +76,8 @@ final class AppSettings {
         self.inputDeviceID = AudioDeviceID(defaults.integer(forKey: "inputDeviceID"))
         let storedTimeout = defaults.integer(forKey: "silenceTimeoutSeconds")
         self.silenceTimeoutSeconds = storedTimeout > 0 ? storedTimeout : 120
+        let storedModel = defaults.string(forKey: "transcriptionModel") ?? ""
+        self.transcriptionModel = TranscriptionModel(rawValue: storedModel) ?? .parakeet
         self.vaultMeetingsPath = defaults.string(forKey: "vaultMeetingsPath") ?? NSString("~/Documents/HushScribe/Meetings").expandingTildeInPath
         self.vaultVoicePath = defaults.string(forKey: "vaultVoicePath") ?? NSString("~/Documents/HushScribe/Voice").expandingTildeInPath
         // Default to true (hidden) if key has never been set
