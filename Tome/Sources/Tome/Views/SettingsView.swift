@@ -59,6 +59,18 @@ struct SettingsView: View {
                 .font(.system(size: 12))
             }
 
+            Section("Model") {
+                Picker("Transcription model", selection: $settings.transcriptionModel) {
+                    ForEach(TranscriptionModel.allCases, id: \.self) { model in
+                        Text(model.displayName).tag(model)
+                    }
+                }
+                .font(.system(size: 12))
+                Text("All models run entirely on device. Parakeet-TDT v3 is multilingual and the fastest. WhisperKit models are downloaded on first use. Apple Speech uses macOS's built-in recognizer and requires a one-time permission prompt.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Recording") {
                 Stepper(
                     "Silence timeout: \(formatTimeout(settings.silenceTimeoutSeconds))",
@@ -82,7 +94,7 @@ struct SettingsView: View {
 
 }
         .formStyle(.grouped)
-        .frame(width: 450, height: 460)
+        .frame(width: 450, height: 560)
         .onAppear {
             inputDevices = MicCapture.availableInputDevices()
         }
