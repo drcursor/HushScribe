@@ -59,6 +59,9 @@ final class TranscriptionEngine {
     /// WhisperKit backend (loaded on demand when WhisperKit model is selected).
     private var whisperKitBackend: WhisperKitASRBackend?
 
+    /// Apple Speech backend (loaded on demand).
+    private var sfSpeechBackend: SFSpeechBackend?
+
     /// Tracks the resolved mic device ID currently in use.
     private var currentMicDeviceID: AudioDeviceID = 0
 
@@ -137,13 +140,10 @@ final class TranscriptionEngine {
     func setModel(_ model: TranscriptionModel) {
         guard !isRunning else { return }
         selectedModel = model
-        // Reset cached backends so they reload with the new model on next start().
-        if model.isWhisperKit {
-            asrManager = nil
-            whisperKitBackend = nil
-        } else {
-            whisperKitBackend = nil
-        }
+        // Clear backends that don't match the new model so they reload on next start().
+        if !model.isWhisperKit { whisperKitBackend = nil }
+        if !model.isAppleSpeech { sfSpeechBackend = nil }
+        if model.isWhisperKit || model.isAppleSpeech { asrManager = nil }
     }
 
     func start(locale: Locale, inputDeviceID: AudioDeviceID = 0, appBundleID: String? = nil) async {
@@ -191,6 +191,49 @@ final class TranscriptionEngine {
                 } catch {
                     let msg = "Failed to load WhisperKit: \(error.localizedDescription)"
                     diagLog("[ENGINE-WK-FAIL] \(msg)")
+                    lastError = msg
+                    assetStatus = "Ready"
+                    isRunning = false
+                    return
+                }
+            }
+        } else if selectedModel.isAppleSpeech {
+            // Apple Speech path: request authorization, load VAD independently, then init recognizer.
+            let authorized = await SFSpeechBackend.requestAuthorization()
+            guard authorized else {
+                lastError = "Speech recognition permission denied. Enable it in System Settings > Privacy & Security > Speech Recognition."
+                assetStatus = "Ready"
+                isRunning = false
+                return
+            }
+            if micVadManager == nil || sysVadManager == nil {
+                assetStatus = "Loading VAD model..."
+                diagLog("[ENGINE-1b] loading VAD model...")
+                do {
+                    let micVad = try await VadManager()
+                    self.micVadManager = micVad
+                    let sysVad = try await VadManager(config: VadConfig(defaultThreshold: 0.92))
+                    self.sysVadManager = sysVad
+                } catch {
+                    let msg = "Failed to load VAD: \(error.localizedDescription)"
+                    diagLog("[ENGINE-VAD-FAIL] \(msg)")
+                    lastError = msg
+                    assetStatus = "Ready"
+                    isRunning = false
+                    return
+                }
+            }
+            if let existing = sfSpeechBackend {
+                asrBackend = existing
+            } else {
+                diagLog("[ENGINE-SF] initializing Apple Speech recognizer...")
+                do {
+                    let backend = try SFSpeechBackend(locale: locale)
+                    self.sfSpeechBackend = backend
+                    asrBackend = backend
+                } catch {
+                    let msg = "Failed to initialize Apple Speech: \(error.localizedDescription)"
+                    diagLog("[ENGINE-SF-FAIL] \(msg)")
                     lastError = msg
                     assetStatus = "Ready"
                     isRunning = false
@@ -329,6 +372,8 @@ final class TranscriptionEngine {
         let backend: any ASRBackend
         if selectedModel.isWhisperKit, let wk = whisperKitBackend {
             backend = wk
+        } else if selectedModel.isAppleSpeech, let sf = sfSpeechBackend {
+            backend = sf
         } else if let asr = asrManager {
             backend = FluidAudioASRBackend(manager: asr)
         } else {

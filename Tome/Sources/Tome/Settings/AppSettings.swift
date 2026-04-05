@@ -12,12 +12,14 @@ enum TranscriptionModel: String, CaseIterable {
     case parakeet = "parakeet"
     case whisperBase = "whisperBase"
     case whisperLargeV3 = "whisperLargeV3"
+    case appleSpeech = "appleSpeech"
 
     var displayName: String {
         switch self {
         case .parakeet: return "Parakeet-TDT v3 (Multilingual)"
         case .whisperBase: return "Whisper Base"
         case .whisperLargeV3: return "Whisper Large v3"
+        case .appleSpeech: return "Apple Speech (On-Device)"
         }
     }
 
@@ -26,10 +28,12 @@ enum TranscriptionModel: String, CaseIterable {
         case .parakeet: return nil
         case .whisperBase: return "openai_whisper-base"
         case .whisperLargeV3: return "openai_whisper-large-v3"
+        case .appleSpeech: return nil
         }
     }
 
     var isWhisperKit: Bool { whisperModelID != nil }
+    var isAppleSpeech: Bool { self == .appleSpeech }
 }
 
 @Observable
