@@ -175,6 +175,12 @@ Alternatively, build from source (see [Build](#build) above) to avoid Gatekeeper
 
 HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io), which itself started from [OpenGranola](https://github.com/yazinsai/OpenGranola). Substantially rewritten from both.
 
+**Models and libraries:**
+
+- [FluidAudio](https://github.com/FluidInference/FluidAudio) by FluidInference — Parakeet-TDT v3 ASR and Silero VAD, used for the default transcription model and voice activity detection across all backends.
+- [WhisperKit](https://github.com/argmaxinc/WhisperKit) by Argmax — on-device Whisper inference on Apple Silicon, used for the Whisper Base and Whisper Large v3 model options. Whisper was originally developed by [OpenAI](https://github.com/openai/whisper).
+- [pyannote.audio](https://github.com/pyannote/pyannote-audio) — speaker diarization model used for post-session speaker separation.
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for the full release history.
