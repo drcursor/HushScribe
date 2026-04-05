@@ -2,6 +2,13 @@
 
 > **Fork note:** HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io). Changes merged from the upstream Tome repository are marked with `[upstream]` in this changelog.
 
+## [2.4.0] — 2026-04-05
+
+- **Multi-model transcription.** Transcription model is now selectable in Settings. Three options ship alongside the existing Parakeet-TDT v3:
+  - **WhisperKit Base** and **WhisperKit Large v3** — OpenAI Whisper via [WhisperKit](https://github.com/argmaxinc/WhisperKit); models download automatically on first session start.
+  - **Apple Speech** — macOS's built-in on-device SFSpeechRecognizer; no download required, prompts for Speech Recognition permission on first use.
+- Selection is persisted across restarts.
+
 ## [2.3.1] — 2026-04-03
 
 - Silence timeout countdown shown below waveform during recording; turns red at ≤30s; click to reset
