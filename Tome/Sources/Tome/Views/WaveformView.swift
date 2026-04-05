@@ -9,9 +9,9 @@ struct WaveformView: View {
         if isRecording {
             HStack(spacing: 0) {
                 // Mic meter
-                VStack(spacing: 3) {
+                VStack(spacing: 2) {
                     VUMeter(audioLevel: micLevel, barCount: 13)
-                        .frame(height: 28)
+                        .frame(height: 24)
                     Text("MIC")
                         .font(.system(size: 8, weight: .medium, design: .monospaced))
                         .foregroundStyle(Color.fg3.opacity(0.6))
@@ -21,13 +21,13 @@ struct WaveformView: View {
                 Rectangle()
                     .fill(Color.fg2.opacity(0.15))
                     .frame(width: 1)
-                    .padding(.bottom, 14)
+                    .padding(.bottom, 12)
                     .padding(.horizontal, 4)
 
                 // System audio meter
-                VStack(spacing: 3) {
+                VStack(spacing: 2) {
                     VUMeter(audioLevel: sysLevel, barCount: 13)
-                        .frame(height: 28)
+                        .frame(height: 24)
                     Text("SYSTEM")
                         .font(.system(size: 8, weight: .medium, design: .monospaced))
                         .foregroundStyle(Color.fg3.opacity(0.6))
