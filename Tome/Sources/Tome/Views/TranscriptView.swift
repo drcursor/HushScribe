@@ -23,22 +23,27 @@ struct TranscriptView: View {
                         VolatileIndicator(text: volatileThemText, speaker: .them)
                             .id("volatile-them")
                     }
+
+                    // Sticky bottom anchor — always present so scrollTo never misses
+                    Color.clear.frame(height: 0).id("scroll-bottom")
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 12)
             }
             .onChange(of: utterances.count) {
                 withAnimation(.easeOut(duration: 0.2)) {
-                    if let last = utterances.last {
-                        proxy.scrollTo(last.id, anchor: .bottom)
-                    }
+                    proxy.scrollTo("scroll-bottom")
                 }
             }
             .onChange(of: volatileYouText) {
-                proxy.scrollTo("volatile-you", anchor: .bottom)
+                withAnimation(.easeOut(duration: 0.1)) {
+                    proxy.scrollTo("scroll-bottom")
+                }
             }
             .onChange(of: volatileThemText) {
-                proxy.scrollTo("volatile-them", anchor: .bottom)
+                withAnimation(.easeOut(duration: 0.1)) {
+                    proxy.scrollTo("scroll-bottom")
+                }
             }
         }
     }

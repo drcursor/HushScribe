@@ -76,9 +76,20 @@ struct ContentView: View {
                 onToggleSysMute: { transcriptionEngine?.isSysMuted.toggle() }
             )
 
-            // Silence timeout countdown
-            if isRunning && !(transcriptionEngine?.isPaused ?? false) {
-                silenceTimeoutDisplay
+            // Silence timeout countdown / pause indicator
+            if isRunning {
+                if transcriptionEngine?.isPaused ?? false {
+                    HStack(spacing: 4) {
+                        Image(systemName: "pause.fill")
+                            .font(.system(size: 10))
+                        Text("Paused")
+                            .font(.system(size: 11))
+                    }
+                    .foregroundStyle(Color.fg3)
+                    .padding(.vertical, 4)
+                } else {
+                    silenceTimeoutDisplay
+                }
             }
 
             // Glass control bar
@@ -262,7 +273,8 @@ struct ContentView: View {
         let deviceSuffix = deviceID != 0 ? MicCapture.deviceName(for: deviceID).map { " · \($0)" } ?? "" : ""
 
         if isRunning {
-            return "\(formatTime(sessionElapsed))\(deviceSuffix)"
+            let pauseSuffix = (transcriptionEngine?.isPaused ?? false) ? " · Paused" : ""
+            return "\(formatTime(sessionElapsed))\(pauseSuffix)\(deviceSuffix)"
         } else if savedFileURL != nil {
             return "\(formatTime(sessionElapsed)) · Done\(deviceSuffix)"
         } else {
@@ -450,12 +462,14 @@ struct ContentView: View {
                 await transcriptionEngine?.start(
                     locale: settings.locale,
                     inputDeviceID: settings.inputDeviceID,
-                    appBundleID: appBundleID
+                    appBundleID: appBundleID,
+                    sysVadThreshold: settings.sysVadThreshold
                 )
             } else {
                 await transcriptionEngine?.start(
                     locale: settings.locale,
-                    inputDeviceID: settings.inputDeviceID
+                    inputDeviceID: settings.inputDeviceID,
+                    sysVadThreshold: settings.sysVadThreshold
                 )
             }
         }

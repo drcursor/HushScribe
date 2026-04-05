@@ -66,6 +66,11 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(transcriptionModel.rawValue, forKey: "transcriptionModel") }
     }
 
+    /// VAD confidence threshold for system audio (0.0–1.0). Higher = less sensitive, fewer false positives.
+    var sysVadThreshold: Double {
+        didSet { UserDefaults.standard.set(sysVadThreshold, forKey: "sysVadThreshold") }
+    }
+
     /// When true, all app windows are invisible to screen sharing / recording.
     var hideFromScreenShare: Bool {
         didSet {
@@ -82,6 +87,8 @@ final class AppSettings {
         self.silenceTimeoutSeconds = storedTimeout > 0 ? storedTimeout : 120
         let storedModel = defaults.string(forKey: "transcriptionModel") ?? ""
         self.transcriptionModel = TranscriptionModel(rawValue: storedModel) ?? .parakeet
+        let storedThreshold = defaults.double(forKey: "sysVadThreshold")
+        self.sysVadThreshold = storedThreshold > 0 ? storedThreshold : 0.92
         self.vaultMeetingsPath = defaults.string(forKey: "vaultMeetingsPath") ?? NSString("~/Documents/HushScribe/Meetings").expandingTildeInPath
         self.vaultVoicePath = defaults.string(forKey: "vaultVoicePath") ?? NSString("~/Documents/HushScribe/Voice").expandingTildeInPath
         // Default to true (hidden) if key has never been set

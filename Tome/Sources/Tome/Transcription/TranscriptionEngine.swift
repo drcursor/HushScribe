@@ -160,7 +160,7 @@ final class TranscriptionEngine {
         if model.isWhisperKit || model.isAppleSpeech { asrManager = nil }
     }
 
-    func start(locale: Locale, inputDeviceID: AudioDeviceID = 0, appBundleID: String? = nil) async {
+    func start(locale: Locale, inputDeviceID: AudioDeviceID = 0, appBundleID: String? = nil, sysVadThreshold: Double = 0.92) async {
         diagLog("[ENGINE-0] start() called, isRunning=\(isRunning)")
         guard !isRunning else { return }
         lastError = nil
@@ -180,7 +180,7 @@ final class TranscriptionEngine {
                 do {
                     let micVad = try await VadManager()
                     self.micVadManager = micVad
-                    let sysVad = try await VadManager(config: VadConfig(defaultThreshold: 0.92))
+                    let sysVad = try await VadManager(config: VadConfig(defaultThreshold: Float(sysVadThreshold)))
                     self.sysVadManager = sysVad
                 } catch {
                     let msg = "Failed to load VAD: \(error.localizedDescription)"
@@ -226,7 +226,7 @@ final class TranscriptionEngine {
                 do {
                     let micVad = try await VadManager()
                     self.micVadManager = micVad
-                    let sysVad = try await VadManager(config: VadConfig(defaultThreshold: 0.92))
+                    let sysVad = try await VadManager(config: VadConfig(defaultThreshold: Float(sysVadThreshold)))
                     self.sysVadManager = sysVad
                 } catch {
                     let msg = "Failed to load VAD: \(error.localizedDescription)"
@@ -277,7 +277,7 @@ final class TranscriptionEngine {
                     diagLog("[ENGINE-1b] loading VAD model...")
                     let micVad = try await VadManager()
                     self.micVadManager = micVad
-                    let sysVad = try await VadManager(config: VadConfig(defaultThreshold: 0.92))
+                    let sysVad = try await VadManager(config: VadConfig(defaultThreshold: Float(sysVadThreshold)))
                     self.sysVadManager = sysVad
 
                     assetStatus = "Models ready"

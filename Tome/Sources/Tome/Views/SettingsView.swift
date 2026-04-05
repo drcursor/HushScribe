@@ -82,6 +82,21 @@ struct SettingsView: View {
                 Text("Session stops automatically after this much silence. During a recording, click the countdown below the waveform to reset the timer.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("System audio sensitivity")
+                            .font(.system(size: 12))
+                        Spacer()
+                        Text(String(format: "%.2f", settings.sysVadThreshold))
+                            .font(.system(size: 12, weight: .medium).monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: $settings.sysVadThreshold, in: 0.5...0.99, step: 0.01)
+                }
+                Text("Controls how confidently the VAD must detect speech in system audio before transcribing. Higher values reduce false positives from background noise. Default and recommended value: 0.92.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
             }
 
             Section("Privacy") {
@@ -94,7 +109,7 @@ struct SettingsView: View {
 
 }
         .formStyle(.grouped)
-        .frame(width: 450, height: 560)
+        .frame(width: 450, height: 640)
         .onAppear {
             inputDevices = MicCapture.availableInputDevices()
         }

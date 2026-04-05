@@ -2,6 +2,12 @@
 
 > **Fork note:** HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io). Changes merged from the upstream Tome repository are marked with `[upstream]` in this changelog.
 
+## [2.6.5] — 2026-04-05
+
+- **Auto-scroll.** Transcript view now follows new utterances as they arrive — no manual scrolling needed.
+- **Pause indicator.** Top bar timer shows `· Paused` and a `⏸ Paused` label replaces the silence countdown when a session is paused.
+- **System audio VAD sensitivity.** New slider in Settings → Recording to control how confidently speech must be detected in system audio before transcription runs. Default and recommended value: 0.92.
+
 ## [2.6.0] — 2026-04-05
 
 - **On-device AI summary.** Each transcript now includes a **Summary** section inserted before the transcript body, containing Topics, Highlights, and To-Dos extracted entirely on-device using Apple's NaturalLanguage framework. No data leaves the device and no API key is required.

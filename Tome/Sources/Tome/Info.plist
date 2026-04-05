@@ -9,9 +9,9 @@
     <key>CFBundleIdentifier</key>
     <string>com.drcursor.hushscribe</string>
     <key>CFBundleVersion</key>
-    <string>2.6.0</string>
+    <string>2.6.5</string>
     <key>CFBundleShortVersionString</key>
-    <string>2.6.0</string>
+    <string>2.6.5</string>
     <key>CFBundleExecutable</key>
     <string>HushScribe</string>
     <key>CFBundleIconFile</key>
