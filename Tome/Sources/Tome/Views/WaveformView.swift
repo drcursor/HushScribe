@@ -12,7 +12,7 @@ struct WaveformView: View {
                 VStack(spacing: 2) {
                     VUMeter(audioLevel: micLevel, barCount: 13)
                         .frame(height: 24)
-                    Text("MIC")
+                    Text("Mic")
                         .font(.system(size: 8, weight: .medium, design: .monospaced))
                         .foregroundStyle(Color.fg3.opacity(0.6))
                 }
@@ -20,15 +20,14 @@ struct WaveformView: View {
                 // Divider
                 Rectangle()
                     .fill(Color.fg2.opacity(0.15))
-                    .frame(width: 1)
-                    .padding(.bottom, 12)
+                    .frame(width: 1, height: 12)
                     .padding(.horizontal, 4)
 
                 // System audio meter
                 VStack(spacing: 2) {
                     VUMeter(audioLevel: sysLevel, barCount: 13)
                         .frame(height: 24)
-                    Text("SYSTEM")
+                    Text("System")
                         .font(.system(size: 8, weight: .medium, design: .monospaced))
                         .foregroundStyle(Color.fg3.opacity(0.6))
                 }
