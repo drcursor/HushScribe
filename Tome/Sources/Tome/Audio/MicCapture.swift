@@ -6,9 +6,14 @@ final class MicCapture: @unchecked Sendable {
     private let engine = AVAudioEngine()
     private let _audioLevel = AudioLevel()
     private let _error = SyncString()
+    private let _muted = AtomicBool()
 
     var audioLevel: Float { _audioLevel.value }
     var captureError: String? { _error.value }
+    var isMuted: Bool {
+        get { _muted.value }
+        set { _muted.value = newValue; if newValue { _audioLevel.value = 0 } }
+    }
 
     func bufferStream(deviceID: AudioDeviceID? = nil) -> AsyncStream<AVAudioPCMBuffer> {
         let level = _audioLevel
@@ -70,8 +75,10 @@ final class MicCapture: @unchecked Sendable {
 
             diagLog("[MIC-4] tapFormat: sr=\(tapFormat.sampleRate) ch=\(tapFormat.channelCount)")
 
+            let muted = _muted
             var tapCallCount = 0
             inputNode.installTap(onBus: 0, bufferSize: 4096, format: tapFormat) { buffer, _ in
+                guard !muted.value else { level.value = 0; return }
                 tapCallCount += 1
                 let rms = Self.normalizedRMS(from: buffer)
                 level.value = min(rms * 25, 1.0)
@@ -300,6 +307,17 @@ final class AudioLevel: @unchecked Sendable {
     private let lock = NSLock()
 
     var value: Float {
+        get { lock.withLock { _value } }
+        set { lock.withLock { _value = newValue } }
+    }
+}
+
+// Thread-safe bool
+final class AtomicBool: @unchecked Sendable {
+    private var _value: Bool = false
+    private let lock = NSLock()
+
+    var value: Bool {
         get { lock.withLock { _value } }
         set { lock.withLock { _value = newValue } }
     }

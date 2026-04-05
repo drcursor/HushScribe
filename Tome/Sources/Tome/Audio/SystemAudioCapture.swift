@@ -9,8 +9,13 @@ final class SystemAudioCapture: NSObject, @unchecked Sendable, SCStreamDelegate,
     private let _micContinuation = OSAllocatedUnfairLock<AsyncStream<AVAudioPCMBuffer>.Continuation?>(uncheckedState: nil)
     private let _audioLevel = AudioLevel()
     private let _paused = OSAllocatedUnfairLock<Bool>(uncheckedState: false)
+    private let _muted = OSAllocatedUnfairLock<Bool>(uncheckedState: false)
 
     var audioLevel: Float { _audioLevel.value }
+    var isMuted: Bool {
+        get { _muted.withLock { $0 } }
+        set { _muted.withLock { $0 = newValue }; if newValue { _audioLevel.value = 0 } }
+    }
 
     // Temp WAV for diarization
     private let _bufferFilePath = OSAllocatedUnfairLock<URL?>(uncheckedState: nil)
@@ -104,6 +109,7 @@ final class SystemAudioCapture: NSObject, @unchecked Sendable, SCStreamDelegate,
     nonisolated func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
         guard type == .audio else { return }
         guard !_paused.withLock({ $0 }) else { return }
+        guard !_muted.withLock({ $0 }) else { _audioLevel.value = 0; return }
         guard let formatDesc = sampleBuffer.formatDescription,
               var asbd = formatDesc.audioStreamBasicDescription else { return }
 

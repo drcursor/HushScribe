@@ -4,6 +4,10 @@ struct WaveformView: View {
     let isRecording: Bool
     let micLevel: Float
     let sysLevel: Float
+    let isMicMuted: Bool
+    let isSysMuted: Bool
+    let onToggleMicMute: () -> Void
+    let onToggleSysMute: () -> Void
 
     var body: some View {
         if isRecording {
@@ -12,9 +16,17 @@ struct WaveformView: View {
                 VStack(spacing: 2) {
                     VUMeter(audioLevel: micLevel, barCount: 13)
                         .frame(height: 24)
-                    Text("Mic")
-                        .font(.system(size: 8, weight: .medium, design: .monospaced))
-                        .foregroundStyle(Color.fg3.opacity(0.6))
+                    HStack(spacing: 3) {
+                        Button(action: onToggleMicMute) {
+                            Image(systemName: isMicMuted ? "mic.slash.fill" : "mic.fill")
+                                .font(.system(size: 7))
+                                .foregroundStyle(isMicMuted ? Color.red.opacity(0.8) : Color.fg3.opacity(0.5))
+                        }
+                        .buttonStyle(.plain)
+                        Text("Mic")
+                            .font(.system(size: 8, weight: .medium, design: .monospaced))
+                            .foregroundStyle(Color.fg3.opacity(0.6))
+                    }
                 }
 
                 // Divider
@@ -27,9 +39,17 @@ struct WaveformView: View {
                 VStack(spacing: 2) {
                     VUMeter(audioLevel: sysLevel, barCount: 13)
                         .frame(height: 24)
-                    Text("System")
-                        .font(.system(size: 8, weight: .medium, design: .monospaced))
-                        .foregroundStyle(Color.fg3.opacity(0.6))
+                    HStack(spacing: 3) {
+                        Button(action: onToggleSysMute) {
+                            Image(systemName: isSysMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                                .font(.system(size: 7))
+                                .foregroundStyle(isSysMuted ? Color.red.opacity(0.8) : Color.fg3.opacity(0.5))
+                        }
+                        .buttonStyle(.plain)
+                        Text("System")
+                            .font(.system(size: 8, weight: .medium, design: .monospaced))
+                            .foregroundStyle(Color.fg3.opacity(0.6))
+                    }
                 }
             }
             .clipped()
