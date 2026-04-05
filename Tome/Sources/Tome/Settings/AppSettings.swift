@@ -19,7 +19,7 @@ enum TranscriptionModel: String, CaseIterable {
         case .parakeet: return "Parakeet-TDT v3 (Multilingual)"
         case .whisperBase: return "Whisper Base"
         case .whisperLargeV3: return "Whisper Large v3"
-        case .appleSpeech: return "Apple Speech (On-Device)"
+        case .appleSpeech: return "Apple Speech"
         }
     }
 
