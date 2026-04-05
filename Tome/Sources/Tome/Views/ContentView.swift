@@ -26,6 +26,8 @@ struct ContentView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var showOnboarding = false
     @State private var audioLevel: Float = 0
+    @State private var micLevel: Float = 0
+    @State private var sysLevel: Float = 0
     @State private var activeSessionType: SessionType?
     @State private var detectedAppName: String?
     @State private var silenceSeconds: Int = 0
@@ -64,7 +66,7 @@ struct ContentView: View {
             }
 
             // Waveform ribbon
-            WaveformView(isRecording: isRunning, audioLevel: audioLevel)
+            WaveformView(isRecording: isRunning, micLevel: micLevel, sysLevel: sysLevel)
 
             // Silence timeout countdown
             if isRunning && !(transcriptionEngine?.isPaused ?? false) {
@@ -143,13 +145,19 @@ struct ContentView: View {
                     continue
                 }
                 if engine.isRunning {
-                    let newLevel = engine.audioLevel
-                    if abs(newLevel - audioLevel) > 0.005 { audioLevel = newLevel }
+                    let newMic = engine.micAudioLevel
+                    let newSys = engine.sysAudioLevel
+                    let newCombined = engine.audioLevel
+                    if abs(newMic - micLevel) > 0.005 { micLevel = newMic }
+                    if abs(newSys - sysLevel) > 0.005 { sysLevel = newSys }
+                    if abs(newCombined - audioLevel) > 0.005 { audioLevel = newCombined }
                     if audioLevel > 0.01 {
                         silenceSeconds = 0
                     }
                 } else if audioLevel != 0 {
                     audioLevel = 0
+                    micLevel = 0
+                    sysLevel = 0
                 }
             }
         }
