@@ -1,7 +1,7 @@
 <h1 align="center">HushScribe</h1>
 
 <p align="center">
-  <strong>Local meeting capture → Obsidian vault → AI agent pipeline. No cloud. No API keys. Your data.</strong>
+  <strong>Local meeting transcription for macOS. No cloud. No API keys. Your data stays on your machine.</strong>
 </p>
 
 <p align="center">
@@ -13,10 +13,13 @@
 
 ---
 
-> **HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome)**, substantially extended with additional features and a new name. See [Credits](#credits) for the original project. All the information found below is sourced from the original Tome Project unless otherwise stated. I'm using this project as a way to test out using AI for modificating OpenSource software for my own use without doing any actual coding, as such most modifications to the original project found under this fork are made using Claude Code.
-Together with Gremble [we decided](https://github.com/Gremble-io/Tome/pull/13#issuecomment-4158040508) not to merge these changes to the main project so that he can keep full control over his codebase.
+> **HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome)**, substantially extended with additional features. See [Credits](#credits) for the original project. Most modifications are made using Claude Code.
 
-HushScribe is a macOS app that captures meetings and voice memos, transcribes them locally with Parakeet-TDT v3, and drops structured `.md` files straight into your Obsidian vault. Everything runs on-device. Nothing phones home.
+## Overview
+
+HushScribe is a macOS menu bar app that captures meetings and voice memos, transcribes them on-device, and writes structured `.md` files to a folder of your choice — including your Obsidian vault.
+
+Every step runs locally. Transcription uses on-device models (Parakeet-TDT v3, WhisperKit, or Apple Speech). The AI summary is generated on-device via Apple's NaturalLanguage framework. No audio, no transcripts, and no data of any kind is ever sent to the internet.
 
 <p align="center">
   <img src="assets/main.png" width="240" alt="HushScribe — main" />
@@ -38,59 +41,51 @@ brew install --cask hushscribe
 
 The current release is not code-signed. macOS will block it from opening by default. See the [Troubleshooting](#troubleshooting) section for steps to bypass Gatekeeper, or follow the instructions shown after installing via Homebrew.
 
-## Background
-
-I'm a consultant who fell down the Obsidian rabbit hole. I built out a vault as a second brain: structured notes with YAML frontmatter, backlinks, tags, and a Claude agent layer that processes everything. Client files, meeting notes, action items, daily briefs, all flowing through the vault automatically.
-
-The problem was capture. I'm on calls all day and I don't take notes. I needed something that would listen, transcribe, and drop structured markdown into the vault where my agent could pick it up and do the rest. Pull out action items, update client files, connect the dots.
-
-I looked at Otter, Granola, Fireflies. They all lock your data in their cloud, their format, their walled garden. None of them output plain markdown. None of them are built to feed into an agent workflow.
-
-I started from [OpenGranola](https://github.com/yazinsai/OpenGranola), learned Swift along the way, and rebuilt it with a different audio pipeline, local ASR, speaker diarization, and vault-native output. If you're running Obsidian with any kind of AI agent setup, you probably have the same gap.
-
 ## Why HushScribe?
 
-- **Plain markdown out.** YAML frontmatter, tags, timestamps. Your vault already knows what to do with it. No proprietary export, no copy-paste, no middleman.
-- **Built for the agent pipeline.** HushScribe is just the capture layer. You talk, it transcribes, your agent picks up the `.md` and does whatever you've wired it to do.
-- **Runs on your machine.** Parakeet-TDT v3 on Apple Silicon. No API keys, no accounts, no subscriptions, no data leaving the building.
+- **Entirely local.** All transcription models run on Apple Silicon. The AI summary uses Apple's on-device NaturalLanguage framework. Nothing leaves your machine — ever.
+- **Plain markdown output.** YAML frontmatter, tags, timestamps, speaker labels. Lands in your vault ready to process. No proprietary format, no export step.
+- **Built for agent workflows.** HushScribe is the capture layer. It transcribes and writes the `.md`; your agent or automation picks it up and does the rest.
+- **No accounts, no subscriptions.** No sign-up, no API keys, no cloud dependency.
 
 ```
 speak → capture → vault → agent → knowledge base
 ```
 
-HushScribe does the first three. Your agent does the rest.
-
 ## Features
 
-- **Multilingual transcription** via Parakeet-TDT v3 ([FluidAudio](https://github.com/FluidInference/FluidAudio)) on Apple Silicon. 25 European languages, auto-detected. Nothing hits the network.
-- **Call Capture** grabs mic + system audio. Detects which conferencing app you're in (Teams, Zoom, Slack, etc.) and filters audio to just that app. Your Spotify and notification sounds stay out of the transcript.
-- **Voice Memo** is mic only. For quick thoughts, verbal notes, stream of consciousness. Saves to a separate folder so it doesn't clutter your meeting transcripts.
-- **Speaker diarization** runs after the call ends. pyannote splits the remote audio into Speaker 2, Speaker 3, Speaker 4. Not perfect, but way better than one wall of unattributed text.
-- **Vault-native output** writes `.md` with frontmatter: `type`, `created`, `attendees`, `tags`, `source_app`. Lands in your vault ready to process.
-- **Privacy.** Hidden from screen sharing by default. No audio saved. Transcripts only.
-- **Silence auto-stop.** 120 seconds of dead air and it stops itself.
+- **Multilingual transcription** via Parakeet-TDT v3 ([FluidAudio](https://github.com/FluidInference/FluidAudio)) — 25 European languages, auto-detected, runs on Apple Silicon ANE.
+- **Multiple transcription models.** Choose between Parakeet-TDT v3 (default, fastest), WhisperKit Base, WhisperKit Large v3, or Apple Speech (built-in, no download required). All run entirely on-device.
+- **Call Capture** grabs mic + system audio. Detects which conferencing app you're in (Teams, Zoom, Slack, etc.) and filters audio to just that app.
+- **Voice Memo** is mic-only. Saves to a separate folder so it doesn't clutter your meeting transcripts.
+- **On-device AI summary.** Each transcript includes a Summary section with Topics, Highlights, and To-Dos, generated locally using Apple's NaturalLanguage framework — no API key, no network.
+- **Speaker diarization** runs after the call ends. Splits remote audio into labelled speakers; post-session prompt lets you assign real names.
+- **Split VU meters.** Separate level meters for microphone and system audio, each with an independent mute toggle.
+- **Vault-native output.** Writes `.md` with frontmatter: `type`, `created`, `attendees`, `tags`, `source_app`.
+- **Silence auto-stop.** Configurable timeout (default 2 min); countdown shown during recording.
+- **Privacy mode.** Hidden from screen sharing by default. No audio saved to disk — transcripts only.
 
 ## Differences Compared to Tome
 
 HushScribe diverges from [Tome](https://github.com/Gremble-io/Tome) in the following ways:
 
-- **Menu bar app.** HushScribe lives in the menu bar with no dock icon by default. The main window is hidden on launch after the first run and can be shown via the "Show HushScribe" menu item. Tome always shows in the dock.
-- **Post-session speaker naming.** After diarization completes, HushScribe prompts you to assign real names to each detected speaker. Those names are rewritten into the transcript. (Contributed by [0xLeathery](https://github.com/0xLeathery/Tome/tree/feature/speaker-naming).)
-- **Silence timeout display and configuration.** A countdown is shown below the waveform during recording, turns red at ≤30 seconds, and can be reset by clicking it. The default timeout is configurable in Settings.
-- **80s-style segmented LED VU meter.** Replaced the smooth spectrum visualizer with a blocky green/yellow/red LED-segment meter.
-- **Follows macOS system appearance.** Removed the forced dark theme; the app adapts to Light or Dark mode.
-- **No auto-update system.** Sparkle has been removed. Updates are distributed manually via GitHub releases.
-- **Feather pen identity.** New app icon and pencil status bar symbol.
-- **Pause recording.** Recordings can be paused and resumed mid-session from both the main UI and the menu bar.
-- **Current input device display.** The active microphone is shown next to the session timer in the top bar.
-- **Alternative model download handling.** The model download is triggered from a dedicated prompt in the main UI on first run, rather than happening silently in the background.
+- **Menu bar app.** Lives in the menu bar with no dock icon by default. Main window is hidden on launch after the first run and shown via "Show HushScribe".
+- **Multiple transcription models.** Adds WhisperKit Base, WhisperKit Large v3, and Apple Speech alongside Parakeet. All on-device.
+- **On-device AI summary.** Topics, Highlights, and To-Dos appended to each transcript using Apple's NaturalLanguage framework.
+- **Split VU meters.** Separate mic and system audio meters, each with a mute toggle.
+- **Pause/resume recording.** Available from both the main UI and the menu bar.
+- **Post-session speaker naming.** Prompts to assign real names to detected speakers after diarization. (Contributed by [0xLeathery](https://github.com/0xLeathery/Tome/tree/feature/speaker-naming).)
+- **Silence timeout display and configuration.** Countdown shown below the waveform, configurable in Settings, resets on click.
+- **80s-style segmented LED VU meter.** Blocky green/yellow/red LED-segment style.
+- **Follows macOS system appearance.** Adapts to Light or Dark mode.
+- **No auto-update system.** Sparkle removed; updates via GitHub releases.
+- **Current input device display.** Active microphone shown next to the session timer.
 
 ## Planned Functionality
 
 - Auto-detect meetings and start recording automatically
-- Support for alternative transcription models
-- Better transcript preview at end of session
-- Installation via brew
+- Better model handling
+- Bettery summarisation
 
 ## Output
 
@@ -118,6 +113,22 @@ tags:
 
 # Call Recording — 2026-03-23 10:00
 
+## Summary
+
+**Topics**
+- Product launch
+- QA sign-off
+
+**Highlights**
+- QA signed off yesterday, marketing assets locked, landing page live in staging
+
+**To-Dos**
+- None identified.
+
+---
+
+## Transcript
+
 **You** (10:00:03)
 Morning. Quick sync on the product launch. Where are we at?
 
@@ -138,6 +149,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full build instructions and proje
 |---|---|---|
 | **Microphone** | All modes | Captures your voice |
 | **Screen Recording** | Call Capture only | ScreenCaptureKit needs this for system audio from conferencing apps |
+| **Speech Recognition** | Apple Speech model only | Required by SFSpeechRecognizer; one-time prompt |
 
 macOS re-prompts for Screen Recording permission roughly monthly. That's an OS thing, not HushScribe.
 
@@ -147,7 +159,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture overview and so
 
 ## Privacy
 
-- Transcription runs entirely on-device. No audio is ever sent anywhere.
+- All transcription models run entirely on-device. No audio is ever sent anywhere.
+- AI summaries are generated on-device using Apple's NaturalLanguage framework. No external API.
 - No network calls. No analytics. No telemetry.
 - No audio is saved to disk. Only text transcripts.
 - The app window is hidden from screen sharing by default.
@@ -158,14 +171,14 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture overview and so
 - **Apple Silicon only.** Parakeet and FluidAudio need Metal / ANE. No Intel.
 - **macOS 26+ only.**
 - **Screen Recording re-prompts monthly.** OS limitation.
-- **Diarization is imperfect.** Works well with headset mics. Laptop speakers with crosstalk will give you worse speaker separation.
-- **No live speaker labels.** Diarization runs after the session ends. During the call, remote audio shows as a single stream.
+- **Diarization is imperfect.** Works well with headset mics. Laptop speakers with crosstalk will give worse speaker separation.
+- **No live speaker labels.** Diarization runs after the session ends.
 
 ## Troubleshooting
 
 **"HushScribe is damaged and can't be opened"**
 
-This is macOS Gatekeeper blocking an unsigned app. Until a signed release is available, run the following command on your terminal : 'xattr -d com.apple.quarantine /Applications/HushScribe.app'
+This is macOS Gatekeeper blocking an unsigned app. Until a signed release is available, run the following command on your terminal : `xattr -d com.apple.quarantine /Applications/HushScribe.app`
 
 You only need to do this once — after that, HushScribe launches normally.
 
@@ -173,7 +186,7 @@ Alternatively, build from source (see [Build](#build) above) to avoid Gatekeeper
 
 ## Credits
 
-HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io), which itself started from [OpenGranola](https://github.com/yazinsai/OpenGranola). Substantially rewritten from both.
+HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io), which itself started from [OpenGranola](https://github.com/yazinsai/OpenGranola).
 
 **Models and libraries:**
 

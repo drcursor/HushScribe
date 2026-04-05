@@ -512,6 +512,17 @@ struct ContentView: View {
 
             transcriptionEngine?.assetStatus = "Finalizing..."
             let savedPath = await transcriptLogger.finalizeFrontmatter()
+
+            // AI Summary (local, on-device)
+            if let savedPath {
+                transcriptionEngine?.assetStatus = "Generating summary..."
+                if let fileContent = try? String(contentsOf: savedPath, encoding: .utf8) {
+                    let transcriptText = SummaryService.extractTranscript(from: fileContent)
+                    let summary = SummaryService.summarize(transcript: transcriptText)
+                    await transcriptLogger.appendSummary(summary)
+                }
+            }
+
             transcriptionEngine?.assetStatus = "Ready"
 
             if activeSessionType == nil, let savedPath {
