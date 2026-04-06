@@ -22,10 +22,9 @@ HushScribe is a macOS menu bar app that captures meetings and voice memos, trans
 Every step runs locally. Transcription uses on-device models (Parakeet-TDT v3, WhisperKit, or Apple Speech). The AI summary is generated on-device via Apple's NaturalLanguage framework. No audio, no transcripts, and no data of any kind is ever sent to the internet.
 
 <p align="center">
-  <img src="assets/main.png" width="240" alt="HushScribe — main" />
-  <img src="assets/capturing.png" width="240" alt="HushScribe — capturing" />
-  <img src="assets/captured.png" width="240" alt="HushScribe — captured" />
-  <img src="assets/speakers.png" width="240" alt="HushScribe — speaker naming" />
+  <img src="assets/main.png" width="280" alt="HushScribe — main" />
+  <img src="assets/capturing.png" width="280" alt="HushScribe — capturing" />
+  <img src="assets/speakers.png" width="280" alt="HushScribe — speaker naming" />
 </p>
 
 ## Installing
