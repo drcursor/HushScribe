@@ -56,6 +56,7 @@ speak → capture → vault → agent → knowledge base
 
 - **Multilingual transcription** via Parakeet-TDT v3 ([FluidAudio](https://github.com/FluidInference/FluidAudio)) — 25 European languages, auto-detected, runs on Apple Silicon ANE.
 - **Multiple transcription models.** Choose between Parakeet-TDT v3 (default, fastest), WhisperKit Base, WhisperKit Large v3, or Apple Speech (built-in, no download required). All run entirely on-device.
+- **Auto-record meetings.** Enable from the menu bar — recording starts automatically when a meeting app (Zoom, Teams, Slack, FaceTime, Webex, Discord, Google Meet, Loom) launches and stops 5 seconds after it quits. Configurable start delay in Settings.
 - **Call Capture** grabs mic + system audio. Detects which conferencing app you're in (Teams, Zoom, Slack, etc.) and filters audio to just that app.
 - **Voice Memo** is mic-only. Saves to a separate folder so it doesn't clutter your meeting transcripts.
 - **On-device AI summary.** Each transcript includes a Summary section with Topics, Highlights, and To-Dos, generated locally using Apple's NaturalLanguage framework — no API key, no network.
@@ -73,6 +74,7 @@ HushScribe diverges from [Tome](https://github.com/Gremble-io/Tome) in the follo
 - **Multiple transcription models.** Adds WhisperKit Base, WhisperKit Large v3, and Apple Speech alongside Parakeet. All on-device.
 - **On-device AI summary.** Topics, Highlights, and To-Dos appended to each transcript using Apple's NaturalLanguage framework.
 - **Split VU meters.** Separate mic and system audio meters, each with a mute toggle.
+- **Auto-record meetings.** Starts and stops recording automatically when a conferencing app is detected. Toggle from the menu bar; delay configurable in Settings.
 - **Pause/resume recording.** Available from both the main UI and the menu bar.
 - **Post-session speaker naming.** Prompts to assign real names to detected speakers after diarization. (Contributed by [0xLeathery](https://github.com/0xLeathery/Tome/tree/feature/speaker-naming).)
 - **Silence timeout display and configuration.** Countdown shown below the waveform, configurable in Settings, resets on click.
@@ -83,7 +85,6 @@ HushScribe diverges from [Tome](https://github.com/Gremble-io/Tome) in the follo
 
 ## Planned Functionality
 
-- Auto-detect meetings and start recording automatically
 - Improved model selection and management in Settings
 - Improved on-device summarisation
 

@@ -17,6 +17,11 @@ struct OnboardingView: View {
             "Your conversation is transcribed in real time. \"You\" captures your mic, \"Them\" captures system audio from the other side. The transcript is the primary view — clean and full-window."
         ),
         (
+            "waveform.badge.plus",
+            "Auto-Record Meetings (Experimental)",
+            "Enable \"Auto-record meetings\" from the menu bar. HushScribe watches for Zoom, Teams, Slack, and other conferencing apps — recording starts only when a call is actually in progress (mic active), and stops when the call ends. This feature is experimental and may not work reliably in all setups."
+        ),
+        (
             "menubar.rectangle",
             "Lives in Your Menu Bar",
             "HushScribe runs quietly in the background. Use \"Show HushScribe\" from the menu bar icon any time to bring this window back."
