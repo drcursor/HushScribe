@@ -15,7 +15,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 ROOT_DIR="$(pwd)"
-SWIFT_DIR="$ROOT_DIR/Tome"
+SWIFT_DIR="$ROOT_DIR/HushScribe"
 APP_NAME="HushScribe"
 BUNDLE_ID="com.drcursor.hushscribe"
 
@@ -52,10 +52,10 @@ if ! otool -l "$APP_BINARY" | grep -Fq "@executable_path/../Frameworks"; then
 fi
 
 # Copy Info.plist
-cp "$SWIFT_DIR/Sources/Tome/Info.plist" "$APP_DIR/Contents/Info.plist"
+cp "$SWIFT_DIR/Sources/HushScribe/Info.plist" "$APP_DIR/Contents/Info.plist"
 
 # Copy app icon
-ICON_PATH="$SWIFT_DIR/Sources/Tome/Assets/AppIcon.icns"
+ICON_PATH="$SWIFT_DIR/Sources/HushScribe/Assets/AppIcon.icns"
 if [[ -f "$ICON_PATH" ]]; then
   cp "$ICON_PATH" "$APP_DIR/Contents/Resources/AppIcon.icns"
   echo "App icon copied"
@@ -86,7 +86,7 @@ fi
 
 # Sign the app
 if [[ -n "${CODESIGN_IDENTITY:-}" ]]; then
-  ENTITLEMENTS="$SWIFT_DIR/Sources/Tome/HushScribe.entitlements"
+  ENTITLEMENTS="$SWIFT_DIR/Sources/HushScribe/HushScribe.entitlements"
   echo "Signing with: $CODESIGN_IDENTITY"
 
   # Sign Sparkle components inside-out (innermost first)
