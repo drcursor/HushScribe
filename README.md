@@ -173,6 +173,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture overview and so
 - **Screen Recording re-prompts monthly.** OS limitation.
 - **Diarization is imperfect.** Works well with headset mics. Laptop speakers with crosstalk will give worse speaker separation.
 - **No live speaker labels.** Diarization runs after the session ends.
+- **Local sound input may stop working.** Changing the input device to another and back again fixes the issue.
 
 ## Troubleshooting
 
