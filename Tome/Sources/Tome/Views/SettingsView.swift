@@ -99,6 +99,26 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("Meeting Detection") {
+                Toggle("Auto-record when meeting detected (experimental)", isOn: $settings.autoMeetingDetect)
+                    .font(.system(size: 12))
+                Text("Automatically starts a Call Capture session when Teams, Zoom, Slack, FaceTime, Webex, Discord, or Google Meet is detected. Recording stops 5 seconds after the app quits.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+
+                Stepper(
+                    "Start delay: \(settings.meetingDetectDelaySecs)s",
+                    value: $settings.meetingDetectDelaySecs,
+                    in: 0...15,
+                    step: 1
+                )
+                .font(.system(size: 12))
+                .disabled(!settings.autoMeetingDetect)
+                Text("Seconds to wait after the meeting app launches before recording starts.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Privacy") {
                 Toggle("Hide from screen sharing", isOn: $settings.hideFromScreenShare)
                     .font(.system(size: 12))
@@ -109,7 +129,7 @@ struct SettingsView: View {
 
 }
         .formStyle(.grouped)
-        .frame(width: 450, height: 640)
+        .frame(width: 450, height: 760)
         .onAppear {
             inputDevices = MicCapture.availableInputDevices()
         }

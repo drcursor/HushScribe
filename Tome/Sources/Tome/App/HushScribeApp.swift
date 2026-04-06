@@ -6,12 +6,14 @@ struct HushScribeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var settings = AppSettings()
     @State private var recordingState = RecordingState()
+    @State private var meetingMonitor = MeetingMonitor()
 
     var body: some Scene {
         WindowGroup(id: "main") {
             ContentView(settings: settings, recordingState: recordingState)
                 .onAppear {
                     settings.applyScreenShareVisibility()
+                    meetingMonitor.configure(settings: settings, recordingState: recordingState)
                 }
         }
         .windowStyle(.hiddenTitleBar)
@@ -34,7 +36,7 @@ struct HushScribeApp: App {
             SettingsView(settings: settings)
         }
         MenuBarExtra {
-            MenuBarMenuView(recordingState: recordingState)
+            MenuBarMenuView(recordingState: recordingState, settings: settings, meetingMonitor: meetingMonitor)
         } label: {
             Image(systemName: menuBarIconName)
                 .symbolRenderingMode(.monochrome)
@@ -57,6 +59,8 @@ struct MenuBarMenuView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.openSettings) private var openSettings
     var recordingState: RecordingState
+    @Bindable var settings: AppSettings
+    var meetingMonitor: MeetingMonitor
     @State private var isWindowVisible = false
 
     var body: some View {
@@ -103,11 +107,35 @@ struct MenuBarMenuView: View {
             }
         }
         Divider()
+        Button {
+            settings.autoMeetingDetect.toggle()
+        } label: {
+            HStack {
+                Text("Auto-record meetings (experimental)")
+                if settings.autoMeetingDetect {
+                    Image(systemName: "checkmark")
+                }
+            }
+        }
+        if settings.autoMeetingDetect && meetingMonitor.isMeetingActive {
+            Text("Meeting detected")
+                .foregroundStyle(.secondary)
+        }
+        Divider()
         Button("Settings...") {
             openSettings()
             NSApp.activate(ignoringOtherApps: true)
         }
         .keyboardShortcut(",")
+        Button("About HushScribe") {
+            NSApp.orderFrontStandardAboutPanel(options: [
+                .credits: NSAttributedString(
+                    string: "A fork of Tome by Gremble-io\nmaintained by drcursor\ngithub.com/drcursor/HushScribe",
+                    attributes: [.font: NSFont.systemFont(ofSize: 11)]
+                )
+            ])
+            NSApp.activate(ignoringOtherApps: true)
+        }
         Divider()
         Button("Quit HushScribe") {
             NSApplication.shared.terminate(nil)
