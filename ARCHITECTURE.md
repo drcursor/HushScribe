@@ -30,7 +30,7 @@
 ## Architecture
 
 ```
-Tome/Sources/Tome/
+HushScribe/Sources/HushScribe/
 ├── App/
 │   └── HushScribeApp.swift             # App entry point, menu bar, app delegate
 ├── Audio/
