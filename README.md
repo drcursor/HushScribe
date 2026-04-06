@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Swift-6.2-F05138?logo=swift&logoColor=white" alt="Swift 6.2" />
+  <img src="https://img.shields.io/badge/Swift-6.3-F05138?logo=swift&logoColor=white" alt="Swift 6.3" />
   <img src="https://img.shields.io/badge/macOS-26%2B-000000?logo=apple&logoColor=white" alt="macOS 26+" />
   <img src="https://img.shields.io/badge/License-MIT-blue" alt="MIT License" />
   <img src="https://img.shields.io/badge/Apple%20Silicon-Required-333333?logo=apple&logoColor=white" alt="Apple Silicon" />
@@ -55,7 +55,7 @@ speak → capture → vault → agent → knowledge base
 
 - **Multilingual transcription** via Parakeet-TDT v3 ([FluidAudio](https://github.com/FluidInference/FluidAudio)) — 25 European languages, auto-detected, runs on Apple Silicon ANE.
 - **Multiple transcription models.** Choose between Parakeet-TDT v3 (default, fastest), WhisperKit Base, WhisperKit Large v3, or Apple Speech (built-in, no download required). All run entirely on-device.
-- **Auto-record meetings.** Enable from the menu bar — recording starts automatically when a meeting app (Zoom, Teams, Slack, FaceTime, Webex, Discord, Google Meet, Loom) launches and stops 5 seconds after it quits. Configurable start delay in Settings.
+- **Auto-record meetings (experimental).** Enable from the menu bar — recording starts automatically when a meeting app (Zoom, Teams, Slack, FaceTime, Webex, Discord, Google Meet, Loom) is running and the microphone is actively in use. Stops 5 seconds after the call ends. Configurable start delay in Settings.
 - **Call Capture** grabs mic + system audio. Detects which conferencing app you're in (Teams, Zoom, Slack, etc.) and filters audio to just that app.
 - **Voice Memo** is mic-only. Saves to a separate folder so it doesn't clutter your meeting transcripts.
 - **On-device AI summary.** Each transcript includes a Summary section with Topics, Highlights, and To-Dos, generated locally using Apple's NaturalLanguage framework — no API key, no network.
@@ -71,31 +71,24 @@ HushScribe diverges from [Tome](https://github.com/Gremble-io/Tome) in the follo
 
 - **Menu bar app.** Lives in the menu bar with no dock icon by default. Main window is hidden on launch after the first run and shown via "Show HushScribe".
 - **Multiple transcription models.** Adds WhisperKit Base, WhisperKit Large v3, and Apple Speech alongside Parakeet. All on-device.
-- **On-device AI summary.** Topics, Highlights, and To-Dos appended to each transcript using Apple's NaturalLanguage framework.
-- **Split VU meters.** Separate mic and system audio meters, each with a mute toggle.
-- **Auto-record meetings.** Starts and stops recording automatically when a conferencing app is detected. Toggle from the menu bar; delay configurable in Settings.
+- **On-device AI summary.** Topics, Highlights, and To-Dos appended to each transcript using Apple's NaturalLanguage framework. No API key or network required.
+- **Split VU meters.** Separate mic and system audio meters, each with an independent mute toggle.
+- **Auto-record meetings (experimental).** Detects active calls by combining app presence with microphone activity. Starts and stops recording automatically. Toggle from the menu bar; delay configurable in Settings.
 - **Pause/resume recording.** Available from both the main UI and the menu bar.
+- **Auto-scroll transcript.** Transcript view follows new utterances as they arrive.
+- **System audio VAD sensitivity.** Configurable slider in Settings; default 0.92.
 - **Post-session speaker naming.** Prompts to assign real names to detected speakers after diarization. (Contributed by [0xLeathery](https://github.com/0xLeathery/Tome/tree/feature/speaker-naming).)
 - **Silence timeout display and configuration.** Countdown shown below the waveform, configurable in Settings, resets on click.
 - **80s-style segmented LED VU meter.** Blocky green/yellow/red LED-segment style.
 - **Follows macOS system appearance.** Adapts to Light or Dark mode.
-- **No auto-update system.** Sparkle removed; updates via GitHub releases.
+- **No auto-update system.** Sparkle removed; updates via GitHub releases or `brew upgrade --cask hushscribe`.
 - **Current input device display.** Active microphone shown next to the session timer.
 
 ## Planned Functionality
 
-- Improved model selection and management in Settings
 - Improved on-device summarisation
 
 ## Output
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Gremble-io/Tome/main/assets/screenshot-vault-frontmatter.png?v=2" width="600" alt="Vault note with YAML frontmatter" />
-</p>
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Gremble-io/Tome/main/assets/screenshot-vault-transcript.png?v=2" width="600" alt="Vault note transcript view" />
-</p>
 
 ```markdown
 ---
@@ -173,13 +166,13 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture overview and so
 - **Screen Recording re-prompts monthly.** OS limitation.
 - **Diarization is imperfect.** Works well with headset mics. Laptop speakers with crosstalk will give worse speaker separation.
 - **No live speaker labels.** Diarization runs after the session ends.
-- **Local sound input may stop working.** Changing the input device to another and back again fixes the issue.
+- **Microphone input may stop working.** Switching to a different input device and back restores it.
 
 ## Troubleshooting
 
 **"HushScribe is damaged and can't be opened"**
 
-This is macOS Gatekeeper blocking an unsigned app. Until a signed release is available, run the following command on your terminal : `xattr -d com.apple.quarantine /Applications/HushScribe.app`
+This is macOS Gatekeeper blocking an unsigned app. Until a signed release is available, run the following command in your terminal: `xattr -d com.apple.quarantine /Applications/HushScribe.app`
 
 You only need to do this once — after that, HushScribe launches normally.
 
