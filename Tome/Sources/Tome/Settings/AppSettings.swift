@@ -71,6 +71,16 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(sysVadThreshold, forKey: "sysVadThreshold") }
     }
 
+    /// When true, recording starts automatically when a meeting app is detected.
+    var autoMeetingDetect: Bool {
+        didSet { UserDefaults.standard.set(autoMeetingDetect, forKey: "autoMeetingDetect") }
+    }
+
+    /// Seconds to wait after a meeting app launches before auto-starting. Default 3.
+    var meetingDetectDelaySecs: Int {
+        didSet { UserDefaults.standard.set(meetingDetectDelaySecs, forKey: "meetingDetectDelaySecs") }
+    }
+
     /// When true, all app windows are invisible to screen sharing / recording.
     var hideFromScreenShare: Bool {
         didSet {
@@ -89,6 +99,9 @@ final class AppSettings {
         self.transcriptionModel = TranscriptionModel(rawValue: storedModel) ?? .parakeet
         let storedThreshold = defaults.double(forKey: "sysVadThreshold")
         self.sysVadThreshold = storedThreshold > 0 ? storedThreshold : 0.92
+        self.autoMeetingDetect = defaults.bool(forKey: "autoMeetingDetect")
+        let storedDelay = defaults.integer(forKey: "meetingDetectDelaySecs")
+        self.meetingDetectDelaySecs = storedDelay > 0 ? storedDelay : 3
         self.vaultMeetingsPath = defaults.string(forKey: "vaultMeetingsPath") ?? NSString("~/Documents/HushScribe/Meetings").expandingTildeInPath
         self.vaultVoicePath = defaults.string(forKey: "vaultVoicePath") ?? NSString("~/Documents/HushScribe/Voice").expandingTildeInPath
         // Default to true (hidden) if key has never been set
