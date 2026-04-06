@@ -80,11 +80,7 @@ fi
 if [[ -n "${APPLE_ID:-}" && -n "${APPLE_TEAM_ID:-}" && -n "${APPLE_APP_PASSWORD:-}" ]]; then
   echo "Submitting DMG for notarization..."
 
-  xcrun notarytool submit "$DMG_PATH" \
-    --apple-id "$APPLE_ID" \
-    --team-id "$APPLE_TEAM_ID" \
-    --password "$APPLE_APP_PASSWORD" \
-    --wait
+  xcrun notarytool submit "$DMG_PATH" --keychain-profile "Hushscribe" --wait
 
   xcrun stapler staple "$DMG_PATH"
   echo "DMG notarization complete"
