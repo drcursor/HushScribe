@@ -2,10 +2,6 @@
 
 > **Fork note:** HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io). Changes merged from the upstream Tome repository are marked with `[upstream]` in this changelog.
 
-## [2.8.0] — 2026-04-06
-
-- **App is now code-signed.** No longer blocked by macOS Gatekeeper. The `xattr` workaround is no longer needed.
-
 ## [2.7.0] — 2026-04-06
 
 - **Meeting auto-detection (experimental).** Enable "Auto-record meetings" from the menu bar. HushScribe watches for Zoom, Teams, Slack, FaceTime, Webex, Discord, Google Meet, and Loom — recording starts only when a call is actually in progress (meeting app running AND microphone actively in use), and stops 5 seconds after the call ends. Configurable start delay in Settings → Meeting Detection.

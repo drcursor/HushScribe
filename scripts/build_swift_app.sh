@@ -137,10 +137,4 @@ fi
 cp -R "$APP_DIR" /Applications/
 echo "Installed to /Applications/$APP_NAME.app"
 
-# Package, sign, and notarize the DMG
-echo ""
-echo "=== Packaging DMG ==="
-"$ROOT_DIR/scripts/make_dmg.sh"
-
-echo ""
 echo "=== Build complete ==="

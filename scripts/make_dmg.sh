@@ -87,9 +87,7 @@ if [[ -n "${APPLE_ID:-}" && -n "${APPLE_TEAM_ID:-}" && -n "${APPLE_APP_PASSWORD:
     --wait
 
   xcrun stapler staple "$DMG_PATH"
-  echo "DMG notarization and stapling complete"
-else
-  echo "Skipping notarization — set APPLE_ID, APPLE_TEAM_ID, and APPLE_APP_PASSWORD to notarize."
+  echo "DMG notarization complete"
 fi
 
-echo "DMG ready: $DMG_PATH"
+echo "DMG created: $DMG_PATH"
