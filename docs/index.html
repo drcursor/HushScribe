@@ -261,42 +261,46 @@
       margin-bottom: 48px;
     }
 
-    /* ── Privacy grid ── */
-    .privacy-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 16px;
+    /* ── Bullet lists (privacy + features) ── */
+    .bullet-list {
+      columns: 2;
+      column-gap: 40px;
+      list-style: none;
     }
 
-    .privacy-card {
-      background: var(--bg1);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 28px;
-      transition: background 0.2s, border-color 0.2s;
+    .bullet-list li {
+      break-inside: avoid;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+      align-items: baseline;
+      font-size: 14px;
+      line-height: 1.5;
     }
 
-    .privacy-card .icon { font-size: 28px; margin-bottom: 14px; }
-    .privacy-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
-    .privacy-card p { font-size: 14px; color: var(--fg2); line-height: 1.6; }
-
-    /* ── Features grid ── */
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 16px;
+    .bullet-list li .bi {
+      flex-shrink: 0;
+      font-size: 15px;
+      width: 20px;
+      text-align: center;
     }
 
-    .feature {
-      background: var(--bg1);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      transition: background 0.2s, border-color 0.2s;
+    .bullet-list li strong {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 2px;
+      color: var(--fg);
     }
 
-    .feature h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
-    .feature p { font-size: 14px; color: var(--fg2); line-height: 1.6; }
+    .bullet-list li span {
+      color: var(--fg2);
+    }
+
+    @media (max-width: 640px) {
+      .bullet-list { columns: 1; }
+    }
 
     /* ── Output ── */
     .output-wrap {
@@ -417,7 +421,7 @@
 
 <!-- Hero -->
 <div class="hero">
-  <div class="hero-badge">100% on-device · No cloud · No API keys</div>
+  <div class="hero-badge">100% on-device · No cloud · No API keys · No subscription</div>
 
   <h1>Your meetings.<br /><span>Your machine.</span></h1>
 
@@ -445,38 +449,14 @@
   <h2>Nothing leaves your Mac.</h2>
   <p class="section-sub">Every part of HushScribe runs locally. There are no accounts, no servers, and no data collection — by design.</p>
 
-  <div class="privacy-grid">
-    <div class="privacy-card">
-      <div class="icon">🎙️</div>
-      <h3>Audio never touches a server</h3>
-      <p>Transcription runs entirely on-device using Apple Silicon. Your voice stays on your machine, always.</p>
-    </div>
-    <div class="privacy-card">
-      <div class="icon">🤖</div>
-      <h3>AI that stays local</h3>
-      <p>Post-session summaries are generated using Apple's NaturalLanguage framework — no external API, no API key, no network call.</p>
-    </div>
-    <div class="privacy-card">
-      <div class="icon">📁</div>
-      <h3>You own the output</h3>
-      <p>Transcripts are plain <code>.md</code> files saved to a folder you choose. No proprietary format, no lock-in.</p>
-    </div>
-    <div class="privacy-card">
-      <div class="icon">🚫</div>
-      <h3>No telemetry</h3>
-      <p>No analytics. No crash reporting sent anywhere. No usage tracking. HushScribe makes zero network requests at runtime.</p>
-    </div>
-    <div class="privacy-card">
-      <div class="icon">🖥️</div>
-      <h3>Hidden from screen sharing</h3>
-      <p>The app window is invisible to screen sharing and recording by default, so it won't appear on your call.</p>
-    </div>
-    <div class="privacy-card">
-      <div class="icon">🔓</div>
-      <h3>Open source</h3>
-      <p>The full source is on GitHub. Read every line, build it yourself, or contribute. No black boxes.</p>
-    </div>
-  </div>
+  <ul class="bullet-list">
+    <li><span class="bi">🎙️</span><div><strong>Audio never touches a server</strong><span>Transcription runs on-device via Apple Silicon. Your voice stays on your machine, always.</span></div></li>
+    <li><span class="bi">🤖</span><div><strong>AI that stays local</strong><span>Post-session summaries use Apple's NaturalLanguage framework — no external API, no API key, no network call.</span></div></li>
+    <li><span class="bi">📁</span><div><strong>You own the output</strong><span>Transcripts are plain <code>.md</code> files in a folder you choose. No proprietary format, no lock-in.</span></div></li>
+    <li><span class="bi">🚫</span><div><strong>No telemetry</strong><span>No analytics, no crash reporting, no usage tracking. Zero network requests at runtime.</span></div></li>
+    <li><span class="bi">🖥️</span><div><strong>Hidden from screen sharing</strong><span>The app window is invisible to screen recording by default — it won't appear on your call.</span></div></li>
+    <li><span class="bi">🔓</span><div><strong>Open source</strong><span>Full source on GitHub. Read every line, build it yourself, or contribute. No black boxes.</span></div></li>
+  </ul>
 </section>
 
 <hr />
@@ -487,44 +467,17 @@
   <h2>Everything you need. Nothing you don't.</h2>
   <p class="section-sub">Built for people who want clean, structured meeting notes without giving up control of their data.</p>
 
-  <div class="features-grid">
-    <div class="feature">
-      <h3>Multilingual transcription</h3>
-      <p>Parakeet-TDT v3 supports 25 European languages with auto-detection, running on Apple Silicon's Neural Engine.</p>
-    </div>
-    <div class="feature">
-      <h3>Multiple transcription models</h3>
-      <p>Choose between Parakeet (default), WhisperKit Base, WhisperKit Large v3, or Apple Speech. All run entirely on-device.</p>
-    </div>
-    <div class="feature">
-      <h3>Call Capture</h3>
-      <p>Captures mic and system audio separately. Detects your conferencing app (Teams, Zoom, Slack…) and filters audio to just that source.</p>
-    </div>
-    <div class="feature">
-      <h3>Voice Memo mode</h3>
-      <p>Mic-only recording saved to a separate folder, so voice notes never mix with your meeting transcripts.</p>
-    </div>
-    <div class="feature">
-      <h3>On-device AI summary</h3>
-      <p>Each transcript gets a Summary section with Topics, Highlights, and To-Dos — generated locally, no API required.</p>
-    </div>
-    <div class="feature">
-      <h3>Speaker diarization</h3>
-      <p>Post-session processing splits remote audio into labelled speakers. A prompt lets you assign real names before saving.</p>
-    </div>
-    <div class="feature">
-      <h3>Auto-record meetings</h3>
-      <p>Detects active calls by combining app presence with microphone activity. Starts and stops recording automatically. Experimental.</p>
-    </div>
-    <div class="feature">
-      <h3>Lives in the menu bar</h3>
-      <p>No dock icon. HushScribe runs quietly in the background and is accessible from the menu bar at any time.</p>
-    </div>
-    <div class="feature">
-      <h3>Vault-native output</h3>
-      <p>Writes structured <code>.md</code> with YAML frontmatter — drop it straight into your Obsidian vault or any folder-based workflow.</p>
-    </div>
-  </div>
+  <ul class="bullet-list">
+    <li><span class="bi">🌍</span><div><strong>Multilingual transcription</strong><span>Parakeet-TDT v3 — 25 European languages, auto-detected, runs on Apple Silicon's Neural Engine.</span></div></li>
+    <li><span class="bi">🧠</span><div><strong>Multiple transcription models</strong><span>Parakeet (default), WhisperKit Base, WhisperKit Large v3, or Apple Speech. All on-device.</span></div></li>
+    <li><span class="bi">📞</span><div><strong>Call Capture</strong><span>Captures mic + system audio. Detects your conferencing app (Teams, Zoom, Slack…) and filters to just that source.</span></div></li>
+    <li><span class="bi">🎤</span><div><strong>Voice Memo mode</strong><span>Mic-only recording saved to a separate folder — voice notes never mix with meeting transcripts.</span></div></li>
+    <li><span class="bi">✨</span><div><strong>On-device AI summary</strong><span>Topics, Highlights, and To-Dos appended to each transcript. Generated locally, no API required.</span></div></li>
+    <li><span class="bi">👥</span><div><strong>Speaker diarization</strong><span>Splits remote audio into labelled speakers after the session. Assign real names before saving.</span></div></li>
+    <li><span class="bi">⚡</span><div><strong>Auto-record meetings</strong><span>Detects active calls via app presence + mic activity. Starts and stops automatically. Experimental.</span></div></li>
+    <li><span class="bi">📋</span><div><strong>Vault-native output</strong><span>Structured <code>.md</code> with YAML frontmatter — drop it into Obsidian or any folder-based workflow.</span></div></li>
+    <li><span class="bi">🔕</span><div><strong>Lives in the menu bar</strong><span>No dock icon. Runs quietly in the background, accessible from the menu bar at any time.</span></div></li>
+  </ul>
 </section>
 
 <hr />
@@ -583,7 +536,7 @@ We're in good shape. QA signed off yesterday, marketing assets are locked.</pre>
 <section id="install">
   <div class="section-label">Install</div>
   <h2>Up and running in seconds.</h2>
-  <p class="section-sub">Requires macOS 26+ and Apple Silicon. No account needed.</p>
+  <p class="section-sub">Requires macOS 26+ and Apple Silicon. Free forever — no account, no license, no recurring fees.</p>
 
   <div class="install-block">
     <div class="install-tab">
