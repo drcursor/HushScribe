@@ -12,7 +12,7 @@ IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
 
 if [[ -z "$1" ]]; then
   echo "Usage: $0 <major|minor|patch|x.y.z>"
-  echo 'scripts/bump_version.sh          # patch: 2.7.0 → 2.7.1'
+  echo 'scripts/bump_version.sh patch    # patch: 2.7.0 → 2.7.1'
   echo 'scripts/bump_version.sh minor    # minor: 2.7.0 → 2.8.0'
   echo 'scripts/bump_version.sh major    # major: 2.7.0 → 3.0.0'
   echo 'scripts/bump_version.sh 2.9.0    # explicit'
