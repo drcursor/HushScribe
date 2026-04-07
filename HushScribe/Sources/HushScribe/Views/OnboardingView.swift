@@ -1,9 +1,15 @@
 import SwiftUI
+import AVFoundation
+import Speech
+import CoreGraphics
 
 struct OnboardingView: View {
     @Binding var isPresented: Bool
     @State private var currentStep = 0
     @State private var arrowOpacity: Double = 1
+    @State private var micGranted = false
+    @State private var screenGranted = false
+    @State private var speechGranted = false
 
     private let steps: [(icon: String, title: String, body: String)] = [
         (
@@ -22,11 +28,18 @@ struct OnboardingView: View {
             "Enable \"Auto-record meetings\" from the menu bar. HushScribe watches for Zoom, Teams, Slack, and other conferencing apps — recording starts only when a call is actually in progress (mic active), and stops when the call ends. This feature is experimental and may not work reliably in all setups."
         ),
         (
+            "lock.shield",
+            "Permissions",
+            "HushScribe needs a few permissions to work. Click each one to grant access."
+        ),
+        (
             "menubar.rectangle",
             "Lives in Your Menu Bar",
             "HushScribe runs quietly in the background. Use \"Show HushScribe\" from the menu bar icon any time to bring this window back."
         ),
     ]
+
+    private let permissionsStepIndex = 3
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -57,6 +70,30 @@ struct OnboardingView: View {
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
 
+                if currentStep == permissionsStepIndex {
+                    Spacer().frame(height: 16)
+                    VStack(spacing: 8) {
+                        PermissionRow(
+                            icon: "mic",
+                            label: "Microphone",
+                            granted: micGranted,
+                            action: requestMic
+                        )
+                        PermissionRow(
+                            icon: "rectangle.inset.filled.on.rectangle",
+                            label: "Screen Recording",
+                            granted: screenGranted,
+                            action: requestScreen
+                        )
+                        PermissionRow(
+                            icon: "waveform",
+                            label: "Speech Recognition",
+                            granted: speechGranted,
+                            action: requestSpeech
+                        )
+                    }
+                }
+
                 Spacer()
 
                 // Dots
@@ -71,13 +108,6 @@ struct OnboardingView: View {
 
                 // Buttons
                 HStack {
-                    Button("Skip") {
-                        finish()
-                    }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-
                     Spacer()
 
                     Button {
@@ -131,11 +161,95 @@ struct OnboardingView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bg0)
+        .onAppear(perform: refreshStatuses)
+        .onChange(of: currentStep) { _, step in
+            if step == permissionsStepIndex { refreshStatuses() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            if currentStep == permissionsStepIndex { refreshStatuses() }
+        }
+    }
+
+    private func refreshStatuses() {
+        micGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        screenGranted = CGPreflightScreenCaptureAccess()
+        speechGranted = SFSpeechRecognizer.authorizationStatus() == .authorized
+    }
+
+    private func requestMic() {
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .authorized:
+            micGranted = true
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .audio) { granted in
+                DispatchQueue.main.async { micGranted = granted }
+            }
+        default:
+            openSettings("x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Microphone")
+        }
+    }
+
+    private func requestScreen() {
+        // CGRequestScreenCaptureAccess only shows a banner on modern macOS; always open
+        // Settings so the user can actually toggle the permission on.
+        CGRequestScreenCaptureAccess()
+        openSettings("x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_ScreenCapture")
+    }
+
+    private func requestSpeech() {
+        switch SFSpeechRecognizer.authorizationStatus() {
+        case .authorized:
+            speechGranted = true
+        case .notDetermined:
+            SFSpeechRecognizer.requestAuthorization { status in
+                DispatchQueue.main.async { speechGranted = status == .authorized }
+            }
+        default:
+            openSettings("x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_SpeechRecognition")
+        }
+    }
+
+    private func openSettings(_ urlString: String) {
+        if let url = URL(string: urlString) {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     private func finish() {
         withAnimation(.easeOut(duration: 0.2)) {
             isPresented = false
         }
+    }
+}
+
+private struct PermissionRow: View {
+    let icon: String
+    let label: String
+    let granted: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .frame(width: 16)
+                Text(label)
+                    .font(.system(size: 13, weight: .medium))
+                Spacer()
+                if granted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .font(.system(size: 14))
+                } else {
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
     }
 }

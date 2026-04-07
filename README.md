@@ -38,8 +38,6 @@ brew install --cask hushscribe
 
 **Manual:** Download the DMG from the [latest release](https://github.com/drcursor/HushScribe/releases/latest) and drag HushScribe to `/Applications`.
 
-The current release is not code-signed. macOS will block it from opening by default. See the [Troubleshooting](#troubleshooting) section for steps to bypass Gatekeeper, or follow the instructions shown after installing via Homebrew.
-
 ## Why HushScribe?
 
 - **Entirely local.** Transcription and AI summary both run on-device — Parakeet, WhisperKit, Apple Speech, and Apple's NaturalLanguage framework. Nothing leaves your machine.
@@ -169,14 +167,6 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture overview and so
 - **Microphone input may stop working.** Switching to a different input device and back restores it.
 
 ## Troubleshooting
-
-**"HushScribe is damaged and can't be opened"**
-
-This is macOS Gatekeeper blocking an unsigned app. Until a signed release is available, run the following command in your terminal: `xattr -d com.apple.quarantine /Applications/HushScribe.app`
-
-You only need to do this once — after that, HushScribe launches normally.
-
-Alternatively, build from source (see [Build](#build) above) to avoid Gatekeeper entirely.
 
 ## Credits
 
