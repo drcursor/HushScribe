@@ -2,34 +2,33 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleName</key>
-    <string>HushScribe</string>
-    <key>CFBundleDisplayName</key>
-    <string>HushScribe</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.drcursor.hushscribe</string>
-    <key>CFBundleVersion</key>
-    <string>2.7.0</string>
-    <key>CFBundleShortVersionString</key>
-    <string>2.7.0</string>
-    <key>CFBundleExecutable</key>
-    <string>HushScribe</string>
-    <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>26.0</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>HushScribe needs microphone access to transcribe your voice in real-time during conversations.</string>
-    <key>NSSpeechRecognitionUsageDescription</key>
-    <string>HushScribe uses Apple's on-device speech recognition to transcribe your voice without sending audio to any server.</string>
-    <key>NSScreenCaptureUsageDescription</key>
-    <string>HushScribe needs screen capture permission to capture system audio from other participants.</string>
-    <key>LSUIElement</key>
-    <true/>
-    <key>LSApplicationCategoryType</key>
-    <string>public.app-category.productivity</string>
-
+	<key>CFBundleDisplayName</key>
+	<string>HushScribe</string>
+	<key>CFBundleExecutable</key>
+	<string>HushScribe</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.drcursor.hushscribe</string>
+	<key>CFBundleName</key>
+	<string>HushScribe</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>2.8.0</string>
+	<key>CFBundleVersion</key>
+	<string>2.8.0</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>26.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>HushScribe needs microphone access to transcribe your voice in real-time during conversations.</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>HushScribe needs screen capture permission to capture system audio from other participants.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>HushScribe uses Apple's on-device speech recognition to transcribe your voice without sending audio to any server.</string>
 </dict>
 </plist>

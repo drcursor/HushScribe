@@ -1,1 +1,1 @@
-rm /Users/eduardobalsa/work/claude/Tome/dist/HushScribe.app/Contents/MacOS/HushScribe; scripts/build_swift_app.sh ; defaults delete com.drcursor.hushscribe ; /Users/eduardobalsa/work/claude/Tome/dist/HushScribe.app/Contents/MacOS/HushScribe
+rm dist/HushScribe.app/Contents/MacOS/HushScribe; scripts/release.sh test ; defaults delete com.drcursor.hushscribe ; dist/HushScribe.app/Contents/MacOS/HushScribe
