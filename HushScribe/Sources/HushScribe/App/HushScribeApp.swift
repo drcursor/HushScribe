@@ -4,13 +4,34 @@ import AppKit
 @main
 struct HushScribeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @State private var settings = AppSettings()
-    @State private var recordingState = RecordingState()
-    @State private var meetingMonitor = MeetingMonitor()
+    @State private var settings: AppSettings
+    @State private var recordingState: RecordingState
+    @State private var meetingMonitor: MeetingMonitor
+    @State private var transcriptStore: TranscriptStore
+    @State private var transcriptionEngine: TranscriptionEngine
+
+    init() {
+        let s = AppSettings()
+        let rs = RecordingState()
+        let mm = MeetingMonitor()
+        let store = TranscriptStore()
+        let engine = TranscriptionEngine(transcriptStore: store)
+        engine.setModel(s.transcriptionModel)
+        _settings = State(wrappedValue: s)
+        _recordingState = State(wrappedValue: rs)
+        _meetingMonitor = State(wrappedValue: mm)
+        _transcriptStore = State(wrappedValue: store)
+        _transcriptionEngine = State(wrappedValue: engine)
+    }
 
     var body: some Scene {
         WindowGroup(id: "main") {
-            ContentView(settings: settings, recordingState: recordingState)
+            ContentView(
+                settings: settings,
+                recordingState: recordingState,
+                transcriptStore: transcriptStore,
+                transcriptionEngine: transcriptionEngine
+            )
                 .onAppear {
                     settings.applyScreenShareVisibility()
                     meetingMonitor.configure(settings: settings, recordingState: recordingState)
@@ -33,7 +54,7 @@ struct HushScribeApp: App {
             }
         }
         Settings {
-            SettingsView(settings: settings)
+            SettingsView(settings: settings, engine: transcriptionEngine)
         }
         MenuBarExtra {
             MenuBarMenuView(recordingState: recordingState, settings: settings, meetingMonitor: meetingMonitor)
@@ -68,21 +89,20 @@ struct MenuBarMenuView: View {
             .font(.headline)
             .onAppear { isWindowVisible = checkWindowVisible() }
         Divider()
-        Button(isWindowVisible ? "Hide HushScribe" : "Show HushScribe") {
-            if isWindowVisible {
-                NSApp.windows.first { (w: NSWindow) in w.isVisible && !(w is NSPanel) && w.level == .normal }?.orderOut(nil)
-                NSApp.setActivationPolicy(.accessory)
-                isWindowVisible = false
+        Button("Show HushScribe") {
+            NSApp.setActivationPolicy(.regular)
+            if let existing = NSApp.windows.first(where: { (w: NSWindow) in !(w is NSPanel) && w.level == .normal }) {
+                existing.makeKeyAndOrderFront(nil)
             } else {
-                NSApp.setActivationPolicy(.regular)
-                if let existing = NSApp.windows.first(where: { (w: NSWindow) in !(w is NSPanel) && w.level == .normal }) {
-                    existing.makeKeyAndOrderFront(nil)
-                } else {
-                    openWindow(id: "main")
-                }
-                NSApp.activate(ignoringOtherApps: true)
-                isWindowVisible = true
+                openWindow(id: "main")
             }
+            NSApp.activate(ignoringOtherApps: true)
+            isWindowVisible = true
+        }
+        Button("Hide HushScribe") {
+            NSApp.windows.first { (w: NSWindow) in w.isVisible && !(w is NSPanel) && w.level == .normal }?.orderOut(nil)
+            NSApp.setActivationPolicy(.accessory)
+            isWindowVisible = false
         }
         Divider()
         if !recordingState.isRecording {

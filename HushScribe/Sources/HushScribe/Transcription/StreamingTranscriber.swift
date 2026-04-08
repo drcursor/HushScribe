@@ -39,9 +39,8 @@ final class StreamingTranscriber: @unchecked Sendable {
 
     /// Silero VAD expects chunks of 4096 samples (256ms at 16kHz).
     private static let vadChunkSize = 4096
-    /// Flush speech for transcription every ~30 seconds (480,000 samples at 16kHz).
-    /// Longer chunks give Parakeet-TDT more context for better accuracy.
-    private static let flushInterval = 480_000
+    /// Flush speech for transcription every ~6 seconds (96,000 samples at 16kHz).
+    private static let flushInterval = 96_000
 
     /// Main loop: reads audio buffers, runs VAD, transcribes speech segments.
     /// Returns `true` if the loop exited due to fatal (repeated) errors.
@@ -143,7 +142,7 @@ final class StreamingTranscriber: @unchecked Sendable {
     /// Returns `true` on success, `false` on ASR error.
     private func transcribeSegment(_ samples: [Float]) async -> Bool {
         do {
-            let text = try await asrBackend.transcribe(samples, source: audioSource)
+            let text = try await asrBackend.transcribe(samples, source: audioSource, onPartial: onPartial)
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { return true }
             log.info("[\(self.speaker.rawValue)] transcribed: \(trimmed.prefix(80))")

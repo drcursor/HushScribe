@@ -36,7 +36,7 @@ final class SFSpeechBackend: @unchecked Sendable, ASRBackend {
         }
     }
 
-    func transcribe(_ samples: [Float], source: AudioSource) async throws -> String {
+    func transcribe(_ samples: [Float], source: AudioSource, onPartial: (@Sendable (String) -> Void)?) async throws -> String {
         let format = AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
             sampleRate: 16000,
@@ -53,7 +53,7 @@ final class SFSpeechBackend: @unchecked Sendable, ASRBackend {
 
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.requiresOnDeviceRecognition = true
-        request.shouldReportPartialResults = false
+        request.shouldReportPartialResults = onPartial != nil
         request.append(buffer)
         request.endAudio()
 
@@ -64,13 +64,17 @@ final class SFSpeechBackend: @unchecked Sendable, ASRBackend {
                 if let error {
                     resumed = true
                     continuation.resume(throwing: error)
-                } else if let result, result.isFinal {
-                    resumed = true
+                } else if let result {
                     let text = result.bestTranscription.formattedString
-                    if text.isEmpty {
-                        continuation.resume(throwing: SFSpeechBackendError.noResult)
-                    } else {
-                        continuation.resume(returning: text)
+                    if result.isFinal {
+                        resumed = true
+                        if text.isEmpty {
+                            continuation.resume(throwing: SFSpeechBackendError.noResult)
+                        } else {
+                            continuation.resume(returning: text)
+                        }
+                    } else if !text.isEmpty {
+                        onPartial?(text)
                     }
                 }
             }

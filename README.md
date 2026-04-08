@@ -164,7 +164,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture overview and so
 - **Screen Recording re-prompts monthly.** OS limitation.
 - **Diarization is imperfect.** Works well with headset mics. Laptop speakers with crosstalk will give worse speaker separation.
 - **No live speaker labels.** Diarization runs after the session ends.
-- **Microphone input may stop working.** Switching to a different input device and back restores it.
+- **Microphone input may stop working.** If no audio is captured, switching to a specific input device in Settings → Recording (instead of "System Default") usually resolves it.
 
 ## Troubleshooting
 

@@ -9,7 +9,7 @@ final class WhisperKitASRBackend: @unchecked Sendable, ASRBackend {
         self.whisperKit = whisperKit
     }
 
-    func transcribe(_ samples: [Float], source: AudioSource) async throws -> String {
+    func transcribe(_ samples: [Float], source: AudioSource, onPartial: (@Sendable (String) -> Void)?) async throws -> String {
         let results = try await whisperKit.transcribe(audioArray: samples)
         return results.map(\.text).joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
     }

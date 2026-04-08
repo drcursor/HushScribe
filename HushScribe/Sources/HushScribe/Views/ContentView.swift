@@ -19,8 +19,8 @@ private let conferencingBundleIDs: [String: String] = [
 struct ContentView: View {
     @Bindable var settings: AppSettings
     var recordingState: RecordingState
-    @State private var transcriptStore = TranscriptStore()
-    @State private var transcriptionEngine: TranscriptionEngine?
+    var transcriptStore: TranscriptStore
+    var transcriptionEngine: TranscriptionEngine
     @State private var sessionStore = SessionStore()
     @State private var transcriptLogger = TranscriptLogger()
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
@@ -47,7 +47,7 @@ struct ContentView: View {
             if !isRunning && transcriptStore.utterances.isEmpty
                 && transcriptStore.volatileYouText.isEmpty
                 && transcriptStore.volatileThemText.isEmpty {
-                if transcriptionEngine?.modelDownloadState != .ready {
+                if transcriptionEngine.modelDownloadState != .ready {
                     modelDownloadState
                 } else {
                     emptyState
@@ -70,15 +70,15 @@ struct ContentView: View {
                 isRecording: isRunning,
                 micLevel: micLevel,
                 sysLevel: sysLevel,
-                isMicMuted: transcriptionEngine?.isMicMuted ?? false,
-                isSysMuted: transcriptionEngine?.isSysMuted ?? false,
-                onToggleMicMute: { transcriptionEngine?.isMicMuted.toggle() },
-                onToggleSysMute: { transcriptionEngine?.isSysMuted.toggle() }
+                isMicMuted: transcriptionEngine.isMicMuted,
+                isSysMuted: transcriptionEngine.isSysMuted,
+                onToggleMicMute: { transcriptionEngine.isMicMuted.toggle() },
+                onToggleSysMute: { transcriptionEngine.isSysMuted.toggle() }
             )
 
             // Silence timeout countdown / pause indicator
             if isRunning {
-                if transcriptionEngine?.isPaused ?? false {
+                if transcriptionEngine.isPaused {
                     HStack(spacing: 4) {
                         Image(systemName: "pause.fill")
                             .font(.system(size: 10))
@@ -95,14 +95,14 @@ struct ContentView: View {
             // Glass control bar
             ControlBar(
                 isRecording: isRunning,
-                isPaused: transcriptionEngine?.isPaused ?? false,
-                modelsReady: transcriptionEngine?.modelDownloadState == .ready,
+                isPaused: transcriptionEngine.isPaused,
+                modelsReady: transcriptionEngine.modelDownloadState == .ready,
                 activeSessionType: activeSessionType,
                 audioLevel: audioLevel,
                 detectedApp: detectedAppName,
                 silenceSeconds: silenceSeconds,
-                statusMessage: transcriptionEngine?.modelDownloadState == .downloading ? nil : transcriptionEngine?.assetStatus,
-                errorMessage: transcriptionEngine?.lastError,
+                statusMessage: transcriptionEngine.modelDownloadState == .downloading ? nil : transcriptionEngine.assetStatus,
+                errorMessage: transcriptionEngine.lastError,
                 onStartCallCapture: { startSession(type: .callCapture) },
                 onStartVoiceMemo: { startSession(type: .voiceMemo) },
                 onStop: stopSession,
@@ -149,24 +149,15 @@ struct ContentView: View {
                 NSApp.activate(ignoringOtherApps: true)
                 NSApp.mainWindow?.makeKeyAndOrderFront(nil)
             }
-            if transcriptionEngine == nil {
-                let engine = TranscriptionEngine(transcriptStore: transcriptStore)
-                engine.setModel(settings.transcriptionModel)
-                transcriptionEngine = engine
-            }
         }
         // Audio level polling
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(100))
-                guard let engine = transcriptionEngine else {
-                    if audioLevel != 0 { audioLevel = 0 }
-                    continue
-                }
-                if engine.isRunning {
-                    let newMic = engine.micAudioLevel
-                    let newSys = engine.sysAudioLevel
-                    let newCombined = engine.audioLevel
+                if transcriptionEngine.isRunning {
+                    let newMic = transcriptionEngine.micAudioLevel
+                    let newSys = transcriptionEngine.sysAudioLevel
+                    let newCombined = transcriptionEngine.audioLevel
                     if abs(newMic - micLevel) > 0.005 { micLevel = newMic }
                     if abs(newSys - sysLevel) > 0.005 { sysLevel = newSys }
                     if abs(newCombined - audioLevel) > 0.005 { audioLevel = newCombined }
@@ -188,7 +179,7 @@ struct ContentView: View {
                     silenceSeconds = 0
                     continue
                 }
-                guard !(transcriptionEngine?.isPaused ?? false) else { continue }
+                guard !transcriptionEngine.isPaused else { continue }
                 sessionElapsed += 1
                 if audioLevel < 0.01 {
                     silenceSeconds += 1
@@ -223,11 +214,11 @@ struct ContentView: View {
         }
         .onChange(of: settings.inputDeviceID) {
             if isRunning {
-                transcriptionEngine?.restartMic(inputDeviceID: settings.inputDeviceID)
+                transcriptionEngine.restartMic(inputDeviceID: settings.inputDeviceID)
             }
         }
         .onChange(of: settings.transcriptionModel) {
-            transcriptionEngine?.setModel(settings.transcriptionModel)
+            transcriptionEngine.setModel(settings.transcriptionModel)
         }
         .onChange(of: transcriptStore.utterances.count) {
             handleNewUtterance()
@@ -273,7 +264,7 @@ struct ContentView: View {
         let deviceSuffix = deviceID != 0 ? MicCapture.deviceName(for: deviceID).map { " · \($0)" } ?? "" : ""
 
         if isRunning {
-            let pauseSuffix = (transcriptionEngine?.isPaused ?? false) ? " · Paused" : ""
+            let pauseSuffix = transcriptionEngine.isPaused ? " · Paused" : ""
             return "\(formatTime(sessionElapsed))\(pauseSuffix)\(deviceSuffix)"
         } else if savedFileURL != nil {
             return "\(formatTime(sessionElapsed)) · Done\(deviceSuffix)"
@@ -286,11 +277,11 @@ struct ContentView: View {
 
     private var modelDownloadState: some View {
         VStack(spacing: 12) {
-            if transcriptionEngine?.modelDownloadState == .downloading {
+            if transcriptionEngine.modelDownloadState == .downloading {
                 ProgressView()
                     .controlSize(.large)
                     .tint(Color.accent1)
-                Text(transcriptionEngine?.assetStatus ?? "Downloading...")
+                Text(transcriptionEngine.assetStatus)
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Color.fg2)
                     .multilineTextAlignment(.center)
@@ -306,7 +297,7 @@ struct ContentView: View {
                     .foregroundStyle(Color.fg3)
                     .multilineTextAlignment(.center)
                 Button("Download Model") {
-                    Task { await transcriptionEngine?.downloadModels() }
+                    Task { await transcriptionEngine.downloadModels() }
                 }
                 .buttonStyle(.plain)
                 .font(.system(size: 12, weight: .semibold))
@@ -315,7 +306,7 @@ struct ContentView: View {
                 .padding(.vertical, 8)
                 .background(Color.accent1.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
-                if let error = transcriptionEngine?.lastError {
+                if let error = transcriptionEngine.lastError {
                     Text(error)
                         .font(.system(size: 10))
                         .foregroundStyle(Color.recordRed)
@@ -401,7 +392,7 @@ struct ContentView: View {
     // MARK: - Helpers
 
     private var isRunning: Bool {
-        transcriptionEngine?.isRunning ?? false
+        transcriptionEngine.isRunning
     }
 
     private func formatTime(_ s: Int) -> String {
@@ -441,7 +432,7 @@ struct ContentView: View {
         }
 
         Task {
-            transcriptionEngine?.lastError = nil
+            transcriptionEngine.lastError = nil
             await sessionStore.startSession()
             do {
                 try await transcriptLogger.startSession(
@@ -451,7 +442,7 @@ struct ContentView: View {
                 )
             } catch {
                 await sessionStore.endSession()
-                transcriptionEngine?.lastError = error.localizedDescription
+                transcriptionEngine.lastError = error.localizedDescription
                 return
             }
             activeSessionType = type
@@ -459,14 +450,14 @@ struct ContentView: View {
             recordingState.isRecording = true
             recordingState.isPaused = false
             if type == .callCapture {
-                await transcriptionEngine?.start(
+                await transcriptionEngine.start(
                     locale: settings.locale,
                     inputDeviceID: settings.inputDeviceID,
                     appBundleID: appBundleID,
                     sysVadThreshold: settings.sysVadThreshold
                 )
             } else {
-                await transcriptionEngine?.start(
+                await transcriptionEngine.start(
                     locale: settings.locale,
                     inputDeviceID: settings.inputDeviceID,
                     sysVadThreshold: settings.sysVadThreshold
@@ -476,12 +467,12 @@ struct ContentView: View {
     }
 
     private func pauseFromMenu() {
-        transcriptionEngine?.pause()
+        transcriptionEngine.pause()
         recordingState.isPaused = true
     }
 
     private func resumeFromMenu() {
-        transcriptionEngine?.resume()
+        transcriptionEngine.resume()
         recordingState.isPaused = false
     }
 
@@ -494,19 +485,19 @@ struct ContentView: View {
         recordingState.isPaused = false
 
         Task {
-            await transcriptionEngine?.stop()
+            await transcriptionEngine.stop()
             await sessionStore.endSession()
             await transcriptLogger.endSession()
 
             if wasCallCapture {
-                transcriptionEngine?.assetStatus = "Identifying speakers..."
-                if let segments = await transcriptionEngine?.runPostSessionDiarization() {
-                    transcriptionEngine?.assetStatus = "Rewriting transcript..."
+                transcriptionEngine.assetStatus = "Identifying speakers..."
+                if let segments = await transcriptionEngine.runPostSessionDiarization() {
+                    transcriptionEngine.assetStatus = "Rewriting transcript..."
                     let speakerMap = await transcriptLogger.rewriteWithDiarization(segments: segments)
 
                     let genericLabels = Set(speakerMap.values).sorted()
                     if !genericLabels.isEmpty {
-                        transcriptionEngine?.assetStatus = "Ready"
+                        transcriptionEngine.assetStatus = "Ready"
 
                         let mapping: [String: String] = await withCheckedContinuation { continuation in
                             speakerLabelsForNaming = genericLabels
@@ -517,19 +508,19 @@ struct ContentView: View {
                         }
 
                         if !mapping.isEmpty {
-                            transcriptionEngine?.assetStatus = "Applying names..."
+                            transcriptionEngine.assetStatus = "Applying names..."
                             await transcriptLogger.applySpeakerRenames(mapping)
                         }
                     }
                 }
             }
 
-            transcriptionEngine?.assetStatus = "Finalizing..."
+            transcriptionEngine.assetStatus = "Finalizing..."
             let savedPath = await transcriptLogger.finalizeFrontmatter()
 
             // AI Summary (local, on-device)
             if let savedPath {
-                transcriptionEngine?.assetStatus = "Generating summary..."
+                transcriptionEngine.assetStatus = "Generating summary..."
                 if let fileContent = try? String(contentsOf: savedPath, encoding: .utf8) {
                     let transcriptText = SummaryService.extractTranscript(from: fileContent)
                     let summary = SummaryService.summarize(transcript: transcriptText)
@@ -537,7 +528,7 @@ struct ContentView: View {
                 }
             }
 
-            transcriptionEngine?.assetStatus = "Ready"
+            transcriptionEngine.assetStatus = "Ready"
 
             if activeSessionType == nil, let savedPath {
                 savedFileURL = savedPath

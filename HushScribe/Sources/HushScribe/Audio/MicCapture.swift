@@ -25,7 +25,7 @@ final class MicCapture: @unchecked Sendable {
             diagLog("[MIC-1] bufferStream called, deviceID=\(String(describing: deviceID))")
 
             // Set input device before accessing inputNode format
-            if let id = deviceID {
+            if let id = deviceID, id > 0 {
                 let inputNode = self.engine.inputNode
                 let audioUnit = inputNode.audioUnit!
                 var devID = id
@@ -37,7 +37,7 @@ final class MicCapture: @unchecked Sendable {
                     &devID,
                     UInt32(MemoryLayout<AudioDeviceID>.size)
                 )
-                diagLog("[MIC-2] setInputDevice status=\(status) (0=ok)")
+                diagLog("[MIC-2] setInputDevice \(id) status=\(status) (0=ok)")
                 guard status == noErr else {
                     let msg = "Failed to set input device (OSStatus \(status))"
                     diagLog("[MIC-2-FAIL] \(msg)")
@@ -52,21 +52,19 @@ final class MicCapture: @unchecked Sendable {
             let inputNode = self.engine.inputNode
             let format = inputNode.outputFormat(forBus: 0)
 
-            diagLog("[MIC-3] inputNode format: sr=\(format.sampleRate) ch=\(format.channelCount) interleaved=\(format.isInterleaved) commonFormat=\(format.commonFormat.rawValue)")
-
-            guard format.sampleRate > 0 && format.channelCount > 0 else {
-                let msg = "Invalid audio format: sr=\(format.sampleRate) ch=\(format.channelCount)"
-                diagLog("[MIC-3-FAIL] \(msg)")
-                errorHolder.value = msg
-                continuation.finish()
-                return
-            }
+            // outputFormat can report sampleRate=0 / channelCount=0 on first access before the
+            // engine is started (e.g. immediately after permission is granted on first run).
+            // Fall back to a standard format — AVAudioEngine will convert from the real device
+            // format when the engine starts.
+            let tapSampleRate = format.sampleRate > 0 ? format.sampleRate : 44100
+            let tapChannels: AVAudioChannelCount = format.channelCount > 0 ? format.channelCount : 1
+            diagLog("[MIC-3] inputNode format: sr=\(format.sampleRate) ch=\(format.channelCount) → using sr=\(tapSampleRate) ch=\(tapChannels)")
 
             guard let tapFormat = AVAudioFormat(
-                standardFormatWithSampleRate: format.sampleRate,
-                channels: format.channelCount
+                standardFormatWithSampleRate: tapSampleRate,
+                channels: tapChannels
             ) else {
-                let msg = "Failed to build tap format from input format"
+                let msg = "Failed to build tap format (sr=\(tapSampleRate) ch=\(tapChannels))"
                 diagLog("[MIC-4-FAIL] \(msg)")
                 errorHolder.value = msg
                 continuation.finish()
@@ -297,7 +295,8 @@ final class MicCapture: @unchecked Sendable {
             &dataSize,
             &deviceID
         )
-        return status == noErr ? deviceID : nil
+        // 0 == kAudioDeviceUnknown — no default device configured
+        return (status == noErr && deviceID != 0) ? deviceID : nil
     }
 }
 
