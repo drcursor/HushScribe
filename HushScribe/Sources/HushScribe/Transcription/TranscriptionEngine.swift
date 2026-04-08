@@ -33,6 +33,8 @@ final class TranscriptionEngine {
     private(set) var isRunning = false
     private(set) var isPaused = false
     private(set) var modelDownloadState: ModelDownloadState
+    /// Set while a non-Parakeet model is being pre-downloaded from the Models tab.
+    private(set) var downloadingModel: TranscriptionModel?
     var assetStatus: String = "Ready"
     var lastError: String?
 
@@ -148,6 +150,75 @@ final class TranscriptionEngine {
         modelDownloadState = .ready
         assetStatus = "Ready"
         diagLog("[ENGINE] models downloaded and cached")
+    }
+
+    // MARK: - Per-model download/remove (used by Models settings tab)
+
+    /// Returns true if a model's files are present on disk and ready to use.
+    func isModelDownloaded(_ model: TranscriptionModel) -> Bool {
+        switch model {
+        case .parakeet:
+            let cacheDir = AsrModels.defaultCacheDirectory(for: .v3)
+            return AsrModels.modelsExist(at: cacheDir, version: .v3)
+        case .whisperBase, .whisperLargeV3:
+            guard let modelID = model.whisperModelID else { return false }
+            return FileManager.default.fileExists(atPath: Self.whisperCacheURL(for: modelID).path)
+        case .appleSpeech:
+            return true
+        }
+    }
+
+    /// Pre-downloads a model without starting a session. No-op for Apple Speech.
+    func downloadModel(_ model: TranscriptionModel) async {
+        switch model {
+        case .parakeet:
+            await downloadModels()
+        case .whisperBase, .whisperLargeV3:
+            await preDownloadWhisperKit(model)
+        case .appleSpeech:
+            break
+        }
+    }
+
+    /// Removes a downloaded model from disk. No-op if running or Apple Speech.
+    func removeModel(_ model: TranscriptionModel) {
+        guard !isRunning else { return }
+        switch model {
+        case .parakeet:
+            let cacheDir = AsrModels.defaultCacheDirectory(for: .v3)
+            try? FileManager.default.removeItem(at: cacheDir)
+            asrManager = nil
+            micVadManager = nil
+            sysVadManager = nil
+            modelDownloadState = .needed
+        case .whisperBase, .whisperLargeV3:
+            guard let modelID = model.whisperModelID else { return }
+            try? FileManager.default.removeItem(at: Self.whisperCacheURL(for: modelID))
+            if selectedModel == model { whisperKitBackend = nil }
+        case .appleSpeech:
+            break
+        }
+    }
+
+    private func preDownloadWhisperKit(_ model: TranscriptionModel) async {
+        guard let modelID = model.whisperModelID, downloadingModel == nil else { return }
+        downloadingModel = model
+        assetStatus = "Downloading \(model.displayName)..."
+        do {
+            let wk = try await WhisperKit(model: modelID)
+            if selectedModel == model {
+                whisperKitBackend = WhisperKitASRBackend(wk)
+            }
+        } catch {
+            lastError = "Failed to download \(model.displayName): \(error.localizedDescription)"
+        }
+        downloadingModel = nil
+        assetStatus = "Ready"
+    }
+
+    private static func whisperCacheURL(for modelID: String) -> URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Documents/huggingface/models/argmaxinc/whisperkit-coreml/\(modelID)")
     }
 
     /// Switch the active model. Must be called while a session is not running.
@@ -399,20 +470,21 @@ final class TranscriptionEngine {
         if inputDeviceID != 0 || userSelectedDeviceID != 0 {
             userSelectedDeviceID = inputDeviceID
         }
-        let targetMicID = inputDeviceID > 0 ? inputDeviceID : MicCapture.defaultInputDeviceID() ?? 0
-        guard targetMicID != currentMicDeviceID else {
-            diagLog("[ENGINE-MIC-SWAP] same device \(targetMicID), skipping")
+        let targetMicID: AudioDeviceID? = inputDeviceID > 0 ? inputDeviceID : MicCapture.defaultInputDeviceID()
+        let resolvedTarget = targetMicID ?? 0
+        guard resolvedTarget != currentMicDeviceID else {
+            diagLog("[ENGINE-MIC-SWAP] same device \(resolvedTarget), skipping")
             return
         }
 
-        diagLog("[ENGINE-MIC-SWAP] switching mic from \(currentMicDeviceID) to \(targetMicID)")
+        diagLog("[ENGINE-MIC-SWAP] switching mic from \(currentMicDeviceID) to \(resolvedTarget)")
 
         // Tear down old mic
         micTask?.cancel()
         micTask = nil
         micCapture.stop()
 
-        currentMicDeviceID = targetMicID
+        currentMicDeviceID = resolvedTarget
 
         // Start new mic stream
         let micStream = micCapture.bufferStream(deviceID: targetMicID)
@@ -442,7 +514,7 @@ final class TranscriptionEngine {
             }
         }
 
-        diagLog("[ENGINE-MIC-SWAP] mic restarted on device \(targetMicID)")
+        diagLog("[ENGINE-MIC-SWAP] mic restarted on device \(resolvedTarget)")
     }
 
     // MARK: - Default Device Listener

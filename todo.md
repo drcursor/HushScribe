@@ -25,5 +25,14 @@
 24 - [DONE] Website
 25 - [DONE] Detect meeting ( see projects that do this https://github.com/fastrepl/char, https://github.com/RecapAI/Recap ) and add a toggle (button and status menu) allowing the user to enable automatic recording start when a meeting is detected (eg MS teams, zoom, slackm, etc). The detection should be generic enough to work with other conference systems.
 26 - Next to the 'open in finder' show a 'preview and summarise' button. when clicked a preview window with the final text should be shown, the user should be allowed to ask for the re-generation of the summary component of the text, on a button on the top of the window.
-27 - Split the settings window with tabs : Recording, Privacy, Models, Output
-28 - The models tab on the settings window should have a list of the supported models, options for the user to download and remove the downloaded model as well as a short description for each one.
+27 - [DONE] Split the settings window with tabs : Recording, Privacy, Models, Output
+28 - [DONE] The models tab on the settings window should have a list of the supported models, options for the user to download and remove the downloaded model as well as a short description for each one.
+29 - Summaries should not be created automatically but only when the users generate them on the Preview and Summarise window. Summary output should be written to another file.
+30 - Output tab on the settings window should have an option allowing the output of srt, json and txt files alongside the md file.
+31 - [DONE] Speech detection preview should show output at shorter intervals so the user understands what's being captured.
+31b - https://github.com/jlevy-dev/Murmur/releases
+32 - Drag & drop audio files for transcription
+33 - [DONE] Split the show/hide status menu item into two always visible menu items. Show HushScribe should show the window and bring it to the front. Hide HushScribe should hide the HushScribe window.
+34 - [DONE] On the settings/output window add buttons allowing the user to open the directories on finder
+35 - [DONE] Meeting detection should get it's own tab on settings.
+36 - Allow setting for timeout before stopping recording during automatically triggered meeting recordings.

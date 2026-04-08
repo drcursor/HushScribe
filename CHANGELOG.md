@@ -2,6 +2,12 @@
 
 > **Fork note:** HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io). Changes merged from the upstream Tome repository are marked with `[upstream]` in this changelog.
 
+## [2.9.0] — 2026-04-08
+
+- **Fix: microphone silent on system default input.** On first run (or when "System Default" is selected), the mic sometimes delivered no audio. Root causes: `defaultInputDeviceID()` could return `kAudioDeviceUnknown` (0), which was passed through to `AudioUnitSetProperty` and caused the capture stream to abort; and `AVAudioInputNode.outputFormat(forBus:)` can report `sampleRate=0`/`channelCount=0` immediately after mic permission is granted before the audio unit initialises. Fixed by: never treating device ID 0 as a valid device, and falling back to a standard 44.1 kHz/mono tap format when the engine reports an uninitialised format (AVAudioEngine converts from the real device format on start).
+- **Shorter transcription intervals.** Speech segments are now flushed every ~6 seconds (down from ~30 seconds), so partial output appears much sooner during continuous speech.
+- **Apple Speech partial results.** When using the Apple Speech model, in-progress words appear in the transcript as you speak (typing-effect), clearing when the final result is committed.
+
 ## [2.7.0] — 2026-04-06
 
 - **Meeting auto-detection (experimental).** Enable "Auto-record meetings" from the menu bar. HushScribe watches for Zoom, Teams, Slack, FaceTime, Webex, Discord, Google Meet, and Loom — recording starts only when a call is actually in progress (meeting app running AND microphone actively in use), and stops 5 seconds after the call ends. Configurable start delay in Settings → Meeting Detection.

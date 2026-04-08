@@ -34,6 +34,28 @@ enum TranscriptionModel: String, CaseIterable {
 
     var isWhisperKit: Bool { whisperModelID != nil }
     var isAppleSpeech: Bool { self == .appleSpeech }
+
+    var settingsDescription: String {
+        switch self {
+        case .parakeet:
+            return "Parakeet-TDT v3 via FluidAudio. 25 European languages, auto-detected. Runs on Apple Silicon ANE. Fastest option."
+        case .whisperBase:
+            return "OpenAI Whisper Base via WhisperKit. Good for English. Smaller and faster than Large v3."
+        case .whisperLargeV3:
+            return "OpenAI Whisper Large v3 via WhisperKit. Best accuracy across 99 languages. Larger download."
+        case .appleSpeech:
+            return "macOS built-in speech recogniser. No download required. Requires a one-time permission prompt."
+        }
+    }
+
+    var sizeLabel: String {
+        switch self {
+        case .parakeet: return "~600 MB"
+        case .whisperBase: return "~150 MB"
+        case .whisperLargeV3: return "~1.5 GB"
+        case .appleSpeech: return ""
+        }
+    }
 }
 
 @Observable
