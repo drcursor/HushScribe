@@ -2,6 +2,21 @@
 
 > **Fork note:** HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io). Changes merged from the upstream Tome repository are marked with `[upstream]` in this changelog.
 
+## [2.11.0] — 2026-04-09
+
+- **Transcript Viewer.** Dedicated window for browsing, previewing and summarising saved transcripts. Accessible from the toolbar and the menu bar ("Transcript Viewer…"). Includes a file picker with type filter (All / Meetings / Voice Memos) and date filter (All Time / Today / This Week / This Month), with file sizes shown. Speaker bubbles use the same colours as the live recording view.
+- **Inline input device picker.** Clicking the current input device in the main window top bar now shows an inline dropdown to switch microphone — no need to open Settings.
+- **Save summary UX.** After saving, the button shows "Saved · filename". Re-generating a summary resets the button and prompts to overwrite if the file already exists.
+- **Markdown preview in summary pane.** Toggle between rendered Markdown and plain text. Preview is the default. The AI Summary separator band now contains the save button.
+- **Speaker naming previews.** Speaker naming window now shows up to 3 short text excerpts per detected speaker to help identify who is who.
+- **Synthesised highlights.** AI summary Highlights are now short topic-level headlines (e.g. "Timeline confirmed: deployment, sprint.") rather than verbatim sentences from the transcript. Uses clustering and named-entity extraction to produce distinct, third-person summaries.
+- **Meeting auto-detection stop delay.** Configurable in Settings → Meeting Detection (0–60 s, default 5 s).
+- **Meeting auto-detection toggle in onboarding.** The onboarding wizard now includes a toggle to enable meeting auto-detection on the relevant step.
+- **Device fallback.** If no input device is configured, the system default is selected automatically on launch.
+- **Main window resized.** Shorter and wider (480 × 360). Toolbar with icons for Transcript Viewer, Settings, and Hide.
+- **"Experimental" label removed** from meeting auto-detection everywhere; browser-based meeting limitation noted instead.
+- **"Get Started" closes immediately.** Finishing the onboarding wizard hides the main window without delay.
+
 ## [2.9.0] — 2026-04-08
 
 - **Fix: microphone silent on system default input.** On first run (or when "System Default" is selected), the mic sometimes delivered no audio. Root causes: `defaultInputDeviceID()` could return `kAudioDeviceUnknown` (0), which was passed through to `AudioUnitSetProperty` and caused the capture stream to abort; and `AVAudioInputNode.outputFormat(forBus:)` can report `sampleRate=0`/`channelCount=0` immediately after mic permission is granted before the audio unit initialises. Fixed by: never treating device ID 0 as a valid device, and falling back to a standard 44.1 kHz/mono tap format when the engine reports an uninitialised format (AVAudioEngine converts from the real device format on start).

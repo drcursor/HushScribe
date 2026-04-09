@@ -13,11 +13,9 @@
 
 ---
 
-> **HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome)**, substantially extended with additional features. See [Credits](#credits) for the original project. Most modifications are made using Claude Code.
-
 ## Overview
 
-HushScribe is a macOS menu bar app that captures meetings and voice memos, transcribes them on-device, and writes structured `.md` files to a folder of your choice — including your Obsidian vault.
+HushScribe is a macOS menu bar app that captures meetings and voice memos, transcribes them on-device, and writes structured `.md` files to a folder of your choice (eg. including your Obsidian vault).
 
 Every step runs locally. Transcription uses on-device models (Parakeet-TDT v3, WhisperKit, or Apple Speech). The AI summary is generated on-device via Apple's NaturalLanguage framework. No audio, no transcripts, and no data of any kind is ever sent to the internet.
 
@@ -40,51 +38,48 @@ brew install --cask hushscribe
 
 ## Why HushScribe?
 
-- **Entirely local.** Transcription and AI summary both run on-device — Parakeet, WhisperKit, Apple Speech, and Apple's NaturalLanguage framework. Nothing leaves your machine.
-- **Your data, your format.** Output is plain `.md` with YAML frontmatter, timestamps, and speaker labels. No proprietary export, no lock-in, no copy-paste.
-- **Designed for automation.** HushScribe is the capture layer. Once the file is in your vault, your agent, script, or workflow takes over.
-- **No accounts, no subscriptions, no API keys.** Download and run.
+- **Entirely local.** Transcription and AI summary both run on-device — Parakeet, WhisperKit, Apple Speech, and Apple's NaturalLanguage framework. Nothing ever leaves your machine.
+- **Your data, your files.** Output is plain `.md` with YAML frontmatter, timestamps, and speaker labels. No proprietary export, no lock-in, no copy-paste.
+- **No accounts, no subscriptions, no API keys, no additional background services** Download and run.
 
 ```
-speak → capture → vault → agent → knowledge base
+speak → capture → md transcription → knowledge base
 ```
 
 ## Features
 
 - **Multilingual transcription** via Parakeet-TDT v3 ([FluidAudio](https://github.com/FluidInference/FluidAudio)) — 25 European languages, auto-detected, runs on Apple Silicon ANE.
 - **Multiple transcription models.** Choose between Parakeet-TDT v3 (default, fastest), WhisperKit Base, WhisperKit Large v3, or Apple Speech (built-in, no download required). All run entirely on-device.
-- **Auto-record meetings (experimental).** Enable from the menu bar — recording starts automatically when a meeting app (Zoom, Teams, Slack, FaceTime, Webex, Discord, Google Meet, Loom) is running and the microphone is actively in use. Stops 5 seconds after the call ends. Configurable start delay in Settings.
+- **Auto-record meetings.** Enable from the menu bar — recording starts automatically when a meeting app (Zoom, Teams, Slack, FaceTime, Webex, Discord, Google Meet, Loom) is running and the microphone is actively in use. Stops automatically when the call ends; configurable stop delay in Settings. Note: browser-based meetings (e.g. Google Meet in a browser) are not detected.
 - **Call Capture** grabs mic + system audio. Detects which conferencing app you're in (Teams, Zoom, Slack, etc.) and filters audio to just that app.
 - **Voice Memo** is mic-only. Saves to a separate folder so it doesn't clutter your meeting transcripts.
-- **On-device AI summary.** Each transcript includes a Summary section with Topics, Highlights, and To-Dos, generated locally using Apple's NaturalLanguage framework — no API key, no network.
+- **On-device AI summary.** Each transcript includes a Summary section with Topics, Highlights, and To-Dos, generated locally using Apple's NaturalLanguage framework — no API key, no network. (Experimental)
 - **Speaker diarization** runs after the call ends. Splits remote audio into labelled speakers; post-session prompt lets you assign real names.
 - **Split VU meters.** Separate level meters for microphone and system audio, each with an independent mute toggle.
-- **Vault-native output.** Writes `.md` with frontmatter: `type`, `created`, `attendees`, `tags`, `source_app`.
+- **Obsidian Vault-native compatible.** Writes `.md` with frontmatter: `type`, `created`, `attendees`, `tags`, `source_app`.
 - **Silence auto-stop.** Configurable timeout (default 2 min); countdown shown during recording.
 - **Privacy mode.** Hidden from screen sharing by default. No audio saved to disk — transcripts only.
 
-## Differences Compared to Tome
+## Privacy
 
-HushScribe diverges from [Tome](https://github.com/Gremble-io/Tome) in the following ways:
+- All transcription models run entirely on-device. No audio is ever sent anywhere.
+- AI summaries are generated on-device using Apple's NaturalLanguage framework. No external API. (Experimental)
+- No network calls. No analytics. No telemetry.
+- No audio is saved to disk. Only text transcripts.
+- The app window is hidden from screen sharing by default.
+- Transcripts are saved as plain `.md` files to a folder you choose.
 
-- **Menu bar app.** Lives in the menu bar with no dock icon by default. Main window is hidden on launch after the first run and shown via "Show HushScribe".
-- **Multiple transcription models.** Adds WhisperKit Base, WhisperKit Large v3, and Apple Speech alongside Parakeet. All on-device.
-- **On-device AI summary.** Topics, Highlights, and To-Dos appended to each transcript using Apple's NaturalLanguage framework. No API key or network required.
-- **Split VU meters.** Separate mic and system audio meters, each with an independent mute toggle.
-- **Auto-record meetings (experimental).** Detects active calls by combining app presence with microphone activity. Starts and stops recording automatically. Toggle from the menu bar; delay configurable in Settings.
-- **Pause/resume recording.** Available from both the main UI and the menu bar.
-- **Auto-scroll transcript.** Transcript view follows new utterances as they arrive.
-- **System audio VAD sensitivity.** Configurable slider in Settings; default 0.92.
-- **Post-session speaker naming.** Prompts to assign real names to detected speakers after diarization. (Contributed by [0xLeathery](https://github.com/0xLeathery/Tome/tree/feature/speaker-naming).)
-- **Silence timeout display and configuration.** Countdown shown below the waveform, configurable in Settings, resets on click.
-- **80s-style segmented LED VU meter.** Blocky green/yellow/red LED-segment style.
-- **Follows macOS system appearance.** Adapts to Light or Dark mode.
-- **No auto-update system.** Sparkle removed; updates via GitHub releases or `brew upgrade --cask hushscribe`.
-- **Current input device display.** Active microphone shown next to the session timer.
+## Known Limitations and Issues
 
-## Planned Functionality
-
-- Improved on-device summarisation
+- **Apple Silicon only.** Parakeet and FluidAudio need Metal / ANE. No Intel.
+- **macOS 26+ only.**
+- **Screen Recording re-prompts monthly.** OS limitation.
+- **AI Summaries are not there yet.**
+- **Diarization is imperfect.** Works well with headset mics. Laptop speakers with crosstalk will give worse speaker separation.
+- **No live speaker labels.** Diarization runs after the session ends.
+- **Microphone input may stop working.** If no audio is captured, switching to a specific input device in Settings → Recording (instead of "System Default") usually resolves it.
+- **Local sound input sometimes fails.** System audio capture may silently stop capturing. Changing the input device and restarting the recording session fixes it.
+- **Auto-record meetings detction only for Applications** Browser-based meetings (e.g. Google Meet in a browser) are not detected.
 
 ## Output
 
@@ -104,31 +99,18 @@ tags:
 
 # Call Recording — 2026-03-23 10:00
 
-## Summary
-
-**Topics**
-- Product launch
-- QA sign-off
-
-**Highlights**
-- QA signed off yesterday, marketing assets locked, landing page live in staging
-
-**To-Dos**
-- None identified.
-
----
-
 ## Transcript
 
 **You** (10:00:03)
 Morning. Quick sync on the product launch. Where are we at?
 
-**Speaker 2** (10:00:07)
+**John** (10:00:07)
 We're in good shape. QA signed off yesterday, marketing assets
 are locked, landing page is live in staging.
 ```
 
-Voice memos use `type: fleeting` with a single speaker. Same structure, same frontmatter.
+- Voice memos use `type: fleeting` with a single speaker. Same structure, same frontmatter.
+- User can generate AI Summaries of the transcript (Experimental)
 
 ## Build
 
@@ -148,29 +130,10 @@ macOS re-prompts for Screen Recording permission roughly monthly. That's an OS t
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture overview and source tree.
 
-## Privacy
-
-- All transcription models run entirely on-device. No audio is ever sent anywhere.
-- AI summaries are generated on-device using Apple's NaturalLanguage framework. No external API.
-- No network calls. No analytics. No telemetry.
-- No audio is saved to disk. Only text transcripts.
-- The app window is hidden from screen sharing by default.
-- Transcripts are saved as plain `.md` files to a folder you choose.
-
-## Known Limitations
-
-- **Apple Silicon only.** Parakeet and FluidAudio need Metal / ANE. No Intel.
-- **macOS 26+ only.**
-- **Screen Recording re-prompts monthly.** OS limitation.
-- **Diarization is imperfect.** Works well with headset mics. Laptop speakers with crosstalk will give worse speaker separation.
-- **No live speaker labels.** Diarization runs after the session ends.
-- **Microphone input may stop working.** If no audio is captured, switching to a specific input device in Settings → Recording (instead of "System Default") usually resolves it.
-
-## Troubleshooting
 
 ## Credits
 
-HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io), which itself started from [OpenGranola](https://github.com/yazinsai/OpenGranola).
+**HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome)** by [Gremble-io](https://github.com/Gremble-io), which itself started from [OpenGranola](https://github.com/yazinsai/OpenGranola), substantially extended with additional features. Code is generated with help of Claude Code.
 
 **Models and libraries:**
 
