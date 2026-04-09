@@ -165,9 +165,10 @@ final class MeetingMonitor {
               settings.autoMeetingDetect,
               recordingState.isRecording else { return }
 
+        let stopDelaySecs = settings.meetingStopDelaySecs
         stopTask?.cancel()
         stopTask = Task {
-            try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 s grace
+            try? await Task.sleep(nanoseconds: UInt64(stopDelaySecs) * 1_000_000_000)
             guard !Task.isCancelled, !self.isMeetingActive else { return }
             self.triggerBundleID = nil
             NotificationCenter.default.post(name: .hushscribeStopRecording, object: nil)

@@ -103,6 +103,14 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(meetingDetectDelaySecs, forKey: "meetingDetectDelaySecs") }
     }
 
+    /// Seconds to wait after a meeting ends before auto-stopping. Default 5.
+    var meetingStopDelaySecs: Int {
+        didSet { UserDefaults.standard.set(meetingStopDelaySecs, forKey: "meetingStopDelaySecs") }
+    }
+
+    /// In-memory tab index for Settings navigation (not persisted).
+    var preferredSettingsTab: Int = 0
+
     /// When true, all app windows are invisible to screen sharing / recording.
     var hideFromScreenShare: Bool {
         didSet {
@@ -124,6 +132,9 @@ final class AppSettings {
         self.autoMeetingDetect = defaults.bool(forKey: "autoMeetingDetect")
         let storedDelay = defaults.integer(forKey: "meetingDetectDelaySecs")
         self.meetingDetectDelaySecs = storedDelay > 0 ? storedDelay : 3
+        let storedStopDelay = defaults.integer(forKey: "meetingStopDelaySecs")
+        self.meetingStopDelaySecs = storedStopDelay > 0 ? storedStopDelay : 5
+        self.preferredSettingsTab = 0
         self.vaultMeetingsPath = defaults.string(forKey: "vaultMeetingsPath") ?? NSString("~/Documents/HushScribe/Meetings").expandingTildeInPath
         self.vaultVoicePath = defaults.string(forKey: "vaultVoicePath") ?? NSString("~/Documents/HushScribe/Voice").expandingTildeInPath
         // Default to true (hidden) if key has never been set

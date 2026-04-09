@@ -38,7 +38,7 @@ struct HushScribeApp: App {
                 }
         }
         .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 320, height: 560)
+        .defaultSize(width: 480, height: 480)
         .windowResizability(.contentSize)
         .commands {
             CommandGroup(replacing: .appInfo) {
@@ -131,7 +131,7 @@ struct MenuBarMenuView: View {
             settings.autoMeetingDetect.toggle()
         } label: {
             HStack {
-                Text("Auto-record meetings (experimental)")
+                Text("Auto-record meetings")
                 if settings.autoMeetingDetect {
                     Image(systemName: "checkmark")
                 }
@@ -140,6 +140,10 @@ struct MenuBarMenuView: View {
         if settings.autoMeetingDetect && meetingMonitor.isMeetingActive {
             Text("Meeting detected")
                 .foregroundStyle(.secondary)
+        }
+        Divider()
+        Button("Transcript Viewer…") {
+            NotificationCenter.default.post(name: .hushscribeOpenSummarize, object: nil)
         }
         Divider()
         Button("Settings...") {

@@ -120,6 +120,14 @@ final class MicCapture: @unchecked Sendable {
         _audioLevel.value = 0
     }
 
+    /// Like stop(), but skips engine.reset() so the AUHAL stays initialized.
+    /// Use this before a mid-session device switch so AudioUnitSetProperty works reliably.
+    func stopForSwitch() {
+        engine.inputNode.removeTap(onBus: 0)
+        engine.stop()
+        _audioLevel.value = 0
+    }
+
     private static func normalizedRMS(from buffer: AVAudioPCMBuffer) -> Float {
         let frameLength = Int(buffer.frameLength)
         let channelCount = Int(max(buffer.format.channelCount, 1))

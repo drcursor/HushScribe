@@ -5,21 +5,29 @@ import FluidAudio
 struct SettingsView: View {
     @Bindable var settings: AppSettings
     var engine: TranscriptionEngine
+    @State private var selectedTab = 0
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             RecordingSettingsTab(settings: settings)
                 .tabItem { Label("Recording", systemImage: "waveform") }
+                .tag(0)
             MeetingDetectionSettingsTab(settings: settings)
                 .tabItem { Label("Meetings", systemImage: "person.2") }
+                .tag(1)
             ModelsSettingsTab(settings: settings, engine: engine)
                 .tabItem { Label("Models", systemImage: "cpu") }
+                .tag(2)
             OutputSettingsTab(settings: settings)
                 .tabItem { Label("Output", systemImage: "folder") }
+                .tag(3)
             PrivacySettingsTab(settings: settings)
                 .tabItem { Label("Privacy", systemImage: "lock.shield") }
+                .tag(4)
         }
         .frame(width: 540, height: 560)
+        .onAppear { selectedTab = settings.preferredSettingsTab }
+        .onChange(of: settings.preferredSettingsTab) { _, tab in selectedTab = tab }
     }
 }
 
@@ -73,7 +81,12 @@ private struct RecordingSettingsTab: View {
 
         }
         .formStyle(.grouped)
-        .onAppear { inputDevices = MicCapture.availableInputDevices() }
+        .onAppear {
+            inputDevices = MicCapture.availableInputDevices()
+            if settings.inputDeviceID != 0 && !inputDevices.contains(where: { $0.id == settings.inputDeviceID }) {
+                settings.inputDeviceID = 0
+            }
+        }
     }
 
     private func formatTimeout(_ seconds: Int) -> String {
@@ -91,9 +104,9 @@ private struct MeetingDetectionSettingsTab: View {
     var body: some View {
         Form {
             Section("Auto-Record") {
-                Toggle("Auto-record when meeting detected (experimental)", isOn: $settings.autoMeetingDetect)
+                Toggle("Auto-record when meeting detected", isOn: $settings.autoMeetingDetect)
                     .font(.system(size: 12))
-                Text("Automatically starts a Call Capture session when Teams, Zoom, Slack, FaceTime, Webex, Discord, or Google Meet is detected. Recording stops 5 seconds after the app quits.")
+                Text("Automatically starts a Call Capture session when Teams, Zoom, Slack, FaceTime, Webex, Discord, or Google Meet is detected. Recording stops after the app quits. Browser-based meetings (e.g. Google Meet or Teams in a web browser) are not supported.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
@@ -108,6 +121,18 @@ private struct MeetingDetectionSettingsTab: View {
                 .font(.system(size: 12))
                 .disabled(!settings.autoMeetingDetect)
                 Text("Seconds to wait after the meeting app launches before recording starts.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+
+                Stepper(
+                    "Stop delay: \(settings.meetingStopDelaySecs)s",
+                    value: $settings.meetingStopDelaySecs,
+                    in: 0...60,
+                    step: 5
+                )
+                .font(.system(size: 12))
+                .disabled(!settings.autoMeetingDetect)
+                Text("Seconds to wait after the meeting ends before stopping recording. Gives time for any remaining audio to be captured.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
