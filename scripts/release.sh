@@ -123,4 +123,7 @@ SHA=$(shasum -a 256 dist/HushScribe.dmg | awk '{print $1}')
 sed -i '' "s/version \".*\"/version \"$VERSION\"/" "$CASK"
 sed -i '' "s/sha256 \".*\"/sha256 \"$SHA\"/" "$CASK"
 
+git commit -m "bump cask" Casks/hushscribe.rb && git push
+
 echo "Updated cask to version $VERSION with sha256 $SHA"
+
