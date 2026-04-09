@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import Combine
+import CoreAudio
 
 private let conferencingBundleIDs: [String: String] = [
     "com.microsoft.teams2": "Teams",
@@ -22,6 +23,7 @@ struct ContentView: View {
     var transcriptStore: TranscriptStore
     var transcriptionEngine: TranscriptionEngine
     @State private var sessionStore = SessionStore()
+    @Environment(\.openSettings) private var openSettings
     @State private var transcriptLogger = TranscriptLogger()
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var showOnboarding = false
@@ -34,14 +36,19 @@ struct ContentView: View {
     @State private var savedFileURL: URL?
     @State private var bannerDismissTask: Task<Void, Never>?
     @State private var sessionElapsed: Int = 0
+    @State private var inputDevices: [(id: AudioDeviceID, name: String)] = []
     @State private var showSpeakerNaming = false
     @State private var speakerLabelsForNaming: [String] = []
+    @State private var speakerPreviewsForNaming: [String: [String]] = [:]
     @State private var speakerNamingContinuation: CheckedContinuation<[String: String], Never>?
 
     var body: some View {
         VStack(spacing: 0) {
             // Glass top bar
             topBar
+
+            // Icon toolbar
+            windowToolbar
 
             // Main content area
             if !isRunning && transcriptStore.utterances.isEmpty
@@ -110,11 +117,11 @@ struct ContentView: View {
                 onResume: resumeFromMenu
             )
         }
-        .frame(minWidth: 320, maxWidth: 320, minHeight: 400)
+        .frame(minWidth: 480, maxWidth: 480, minHeight: 360)
         .background(Color.bg0)
         .overlay {
             if showOnboarding {
-                OnboardingView(isPresented: $showOnboarding)
+                OnboardingView(isPresented: $showOnboarding, settings: settings)
                     .transition(.opacity)
             }
         }
@@ -122,6 +129,7 @@ struct ContentView: View {
             if showSpeakerNaming {
                 SpeakerNamingView(
                     speakerLabels: speakerLabelsForNaming,
+                    previews: speakerPreviewsForNaming,
                     onApply: { mapping in
                         showSpeakerNaming = false
                         speakerNamingContinuation?.resume(returning: mapping)
@@ -212,6 +220,9 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .hushscribeResumeRecording)) { _ in
             resumeFromMenu()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .hushscribeOpenSummarize)) { _ in
+            SummarizeView.openWindow(settings: settings, logger: transcriptLogger)
+        }
         .onChange(of: settings.inputDeviceID) {
             if isRunning {
                 transcriptionEngine.restartMic(inputDeviceID: settings.inputDeviceID)
@@ -237,9 +248,35 @@ struct ContentView: View {
             Spacer()
 
             HStack(spacing: 10) {
-                Text(topBarStatus)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(isRunning ? Color.fg1 : Color.fg2)
+                Menu {
+                    Button {
+                        settings.inputDeviceID = 0
+                    } label: {
+                        HStack {
+                            Text("System Default")
+                            if settings.inputDeviceID == 0 { Image(systemName: "checkmark") }
+                        }
+                    }
+                    Divider()
+                    ForEach(inputDevices, id: \.id) { device in
+                        Button {
+                            settings.inputDeviceID = device.id
+                        } label: {
+                            HStack {
+                                Text(device.name)
+                                if settings.inputDeviceID == device.id { Image(systemName: "checkmark") }
+                            }
+                        }
+                    }
+                } label: {
+                    Text(topBarStatus)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(isRunning ? Color.fg1 : Color.fg2)
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                .onAppear { inputDevices = MicCapture.availableInputDevices() }
+                .help("Click to select input device")
 
                 if isRunning {
                     PulsingDot(size: 6)
@@ -255,6 +292,44 @@ struct ContentView: View {
         .frame(height: 44)
         .background(.bar)
         .overlay(Divider(), alignment: .bottom)
+    }
+
+    // MARK: - Window Toolbar
+
+    private var windowToolbar: some View {
+        HStack(spacing: 0) {
+            toolbarButton(icon: "doc.text.magnifyingglass", label: "Transcripts") {
+                SummarizeView.openWindow(settings: settings, logger: transcriptLogger)
+            }
+            toolbarButton(icon: "gear", label: "Settings") {
+                settings.preferredSettingsTab = 0
+                openSettings()
+            }
+            Spacer()
+            toolbarButton(icon: "eye.slash", label: "Hide") {
+                NSApp.windows.first { (w: NSWindow) in w.isVisible && !(w is NSPanel) && w.level == .normal }?.orderOut(nil)
+                NSApp.setActivationPolicy(.accessory)
+            }
+        }
+        .padding(.horizontal, 4)
+        .frame(height: 44)
+        .background(.bar)
+        .overlay(Divider(), alignment: .bottom)
+    }
+
+    private func toolbarButton(icon: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 2) {
+                Image(systemName: icon)
+                    .font(.system(size: 13))
+                Text(label)
+                    .font(.system(size: 9, weight: .medium))
+            }
+            .foregroundStyle(Color.fg2)
+            .frame(width: 52, height: 38)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private var topBarStatus: String {
@@ -374,9 +449,8 @@ struct ContentView: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer()
-            Button("Show in Finder") {
-                NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: url.deletingLastPathComponent().path)
-                savedFileURL = nil
+            Button("Show Transcript") {
+                SummarizeView.openWindow(for: url, settings: settings, logger: transcriptLogger)
             }
             .font(.system(size: 11))
             .buttonStyle(.plain)
@@ -499,8 +573,11 @@ struct ContentView: View {
                     if !genericLabels.isEmpty {
                         transcriptionEngine.assetStatus = "Ready"
 
+                        let previews = await transcriptLogger.speakerExcerpts(for: genericLabels)
+
                         let mapping: [String: String] = await withCheckedContinuation { continuation in
                             speakerLabelsForNaming = genericLabels
+                            speakerPreviewsForNaming = previews
                             speakerNamingContinuation = continuation
                             withAnimation(.easeInOut(duration: 0.25)) {
                                 showSpeakerNaming = true
@@ -517,16 +594,6 @@ struct ContentView: View {
 
             transcriptionEngine.assetStatus = "Finalizing..."
             let savedPath = await transcriptLogger.finalizeFrontmatter()
-
-            // AI Summary (local, on-device)
-            if let savedPath {
-                transcriptionEngine.assetStatus = "Generating summary..."
-                if let fileContent = try? String(contentsOf: savedPath, encoding: .utf8) {
-                    let transcriptText = SummaryService.extractTranscript(from: fileContent)
-                    let summary = SummaryService.summarize(transcript: transcriptText)
-                    await transcriptLogger.appendSummary(summary)
-                }
-            }
 
             transcriptionEngine.assetStatus = "Ready"
 

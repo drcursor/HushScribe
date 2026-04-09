@@ -411,15 +411,64 @@ tags:
         try? FileManager.default.moveItem(at: tmpPath, to: filePath)
     }
 
-    /// Insert an on-device summary section immediately before ## Transcript in the saved file.
-    func appendSummary(_ summary: String) {
-        guard let filePath = lastSessionFilePath else { return }
-        guard var content = try? String(contentsOf: filePath, encoding: .utf8) else { return }
-        let marker = "## Transcript"
-        guard let range = content.range(of: marker) else { return }
-        let section = "## Summary\n\n\(summary)\n\n---\n\n"
-        content.insert(contentsOf: section, at: range.lowerBound)
-        try? content.write(to: filePath, atomically: true, encoding: .utf8)
+    /// Return up to `maxExcerpts` short excerpts per speaker label.
+    /// Used to populate the speaker-naming UI after diarization.
+    func speakerExcerpts(for speakers: [String], maxWords: Int = 12, maxExcerpts: Int = 3) -> [String: [String]] {
+        guard let filePath = currentFilePath ?? lastSessionFilePath,
+              let content = try? String(contentsOf: filePath, encoding: .utf8) else { return [:] }
+
+        let transcriptBody: String
+        if let range = content.range(of: "## Transcript\n") {
+            transcriptBody = String(content[range.upperBound...])
+        } else {
+            transcriptBody = content
+        }
+
+        guard let headerRe = try? NSRegularExpression(pattern: #"^\*\*([^*]+)\*\*"#) else { return [:] }
+
+        var result: [String: [String]] = [:]
+        for block in transcriptBody.components(separatedBy: "\n\n") {
+            let trimmed = block.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            let lines = trimmed.components(separatedBy: "\n")
+            guard let firstLine = lines.first else { continue }
+            let ns = firstLine as NSString
+            guard let match = headerRe.firstMatch(in: firstLine, range: NSRange(location: 0, length: ns.length)) else { continue }
+            let speaker = ns.substring(with: match.range(at: 1))
+            guard speakers.contains(speaker), (result[speaker]?.count ?? 0) < maxExcerpts else { continue }
+            let text = lines.dropFirst().joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { continue }
+            let words = text.split(separator: " ").prefix(maxWords)
+            let excerpt = words.joined(separator: " ") + (words.count == maxWords ? "…" : "")
+            result[speaker, default: []].append(excerpt)
+        }
+        return result
+    }
+
+    /// Write the summary to a separate file alongside the transcript.
+    /// Returns the URL of the created summary file, or nil on failure.
+    @discardableResult
+    func writeSummaryFile(_ summary: String, for transcriptURL: URL) -> URL? {
+        let dir = transcriptURL.deletingLastPathComponent()
+        let baseName = transcriptURL.deletingPathExtension().lastPathComponent
+        let summaryURL = dir.appendingPathComponent("\(baseName) summary.md")
+
+        let dateFmt = ISO8601DateFormatter()
+        let content = """
+        ---
+        type: summary
+        source: "\(transcriptURL.lastPathComponent)"
+        created: "\(dateFmt.string(from: Date()))"
+        ---
+
+        # Summary
+
+        \(summary)
+        """
+        guard (try? content.write(to: summaryURL, atomically: true, encoding: .utf8)) != nil else {
+            return nil
+        }
+        return summaryURL
     }
 
     private func labelForSpeaker(_ rawSpeaker: String) -> String {

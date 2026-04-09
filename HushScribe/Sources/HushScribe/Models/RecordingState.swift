@@ -14,4 +14,5 @@ extension Notification.Name {
     static let hushscribeStopRecording = Notification.Name("hushscribeStopRecording")
     static let hushscribePauseRecording = Notification.Name("hushscribePauseRecording")
     static let hushscribeResumeRecording = Notification.Name("hushscribeResumeRecording")
+    static let hushscribeOpenSummarize = Notification.Name("hushscribeOpenSummarize")
 }

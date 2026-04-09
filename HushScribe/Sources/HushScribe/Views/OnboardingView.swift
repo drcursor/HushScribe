@@ -5,6 +5,7 @@ import CoreGraphics
 
 struct OnboardingView: View {
     @Binding var isPresented: Bool
+    @Bindable var settings: AppSettings
     @State private var currentStep = 0
     @State private var arrowOpacity: Double = 1
     @State private var micGranted = false
@@ -24,8 +25,8 @@ struct OnboardingView: View {
         ),
         (
             "waveform.badge.plus",
-            "Auto-Record Meetings (Experimental)",
-            "Enable \"Auto-record meetings\" from the menu bar. HushScribe watches for Zoom, Teams, Slack, and other conferencing apps — recording starts only when a call is actually in progress (mic active), and stops when the call ends. This feature is experimental and may not work reliably in all setups."
+            "Auto-Record Meetings",
+            "Enable \"Auto-record meetings\" from the menu bar. HushScribe watches for Zoom, Teams, Slack, and other conferencing apps — recording starts only when a call is actually in progress (mic active), and stops when the call ends. Note: browser-based meetings (e.g. Google Meet or Teams in a web browser) are not detected."
         ),
         (
             "lock.shield",
@@ -69,6 +70,14 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if currentStep == 2 {
+                    Spacer().frame(height: 16)
+                    Toggle("Enable auto-record meetings", isOn: $settings.autoMeetingDetect)
+                        .font(.system(size: 13, weight: .medium))
+                        .toggleStyle(.switch)
+                        .frame(maxWidth: 260)
+                }
 
                 if currentStep == permissionsStepIndex {
                     Spacer().frame(height: 16)
@@ -216,9 +225,9 @@ struct OnboardingView: View {
     }
 
     private func finish() {
-        withAnimation(.easeOut(duration: 0.2)) {
-            isPresented = false
-        }
+        isPresented = false
+        NSApp.windows.first { !($0 is NSPanel) && $0.level == .normal }?.orderOut(nil)
+        NSApp.setActivationPolicy(.accessory)
     }
 }
 

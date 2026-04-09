@@ -479,10 +479,10 @@ final class TranscriptionEngine {
 
         diagLog("[ENGINE-MIC-SWAP] switching mic from \(currentMicDeviceID) to \(resolvedTarget)")
 
-        // Tear down old mic
+        // Tear down old mic (no engine.reset() — keeps AUHAL alive for device property change)
         micTask?.cancel()
         micTask = nil
-        micCapture.stop()
+        micCapture.stopForSwitch()
 
         currentMicDeviceID = resolvedTarget
 

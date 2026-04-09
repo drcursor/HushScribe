@@ -3,6 +3,8 @@ import SwiftUI
 struct SpeakerNamingView: View {
     /// Generic labels discovered by diarization, e.g. ["Speaker 2", "Speaker 3"]
     let speakerLabels: [String]
+    /// Short text excerpts per speaker label for identification — may be empty.
+    let previews: [String: [String]]
     /// Called with mapping from generic label -> user-entered name (empty values filtered out)
     let onApply: ([String: String]) -> Void
     /// Called when user wants to skip naming
@@ -57,30 +59,44 @@ struct SpeakerNamingView: View {
 
                 // Editable speaker rows
                 ForEach(speakerLabels, id: \.self) { label in
-                    HStack(spacing: 10) {
-                        Circle()
-                            .fill(Color.fg2.opacity(0.2))
-                            .frame(width: 28, height: 28)
-                            .overlay(
-                                Text(speakerInitial(label))
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(Color.fg2)
-                            )
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(Color.fg2.opacity(0.2))
+                                .frame(width: 28, height: 28)
+                                .overlay(
+                                    Text(speakerInitial(label))
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundStyle(Color.fg2)
+                                )
 
-                        TextField(label, text: binding(for: label))
-                            .textFieldStyle(.plain)
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.fg1)
-                            .focused($focusedField, equals: label)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 6)
-                            .background(Color.bg1.opacity(0.7))
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(focusedField == label ? Color.accent1.opacity(0.4) : Color(NSColor.separatorColor))
-                            )
-                            .onSubmit { advanceFocus(from: label) }
+                            TextField(label, text: binding(for: label))
+                                .textFieldStyle(.plain)
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.fg1)
+                                .focused($focusedField, equals: label)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 6)
+                                .background(Color.bg1.opacity(0.7))
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(focusedField == label ? Color.accent1.opacity(0.4) : Color(NSColor.separatorColor))
+                                )
+                                .onSubmit { advanceFocus(from: label) }
+                        }
+
+                        if let excerpts = previews[label], !excerpts.isEmpty {
+                            VStack(alignment: .leading, spacing: 2) {
+                                ForEach(excerpts, id: \.self) { excerpt in
+                                    Text("\u{201C}\(excerpt)\u{201D}")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(Color.fg3)
+                                        .lineLimit(2)
+                                }
+                            }
+                            .padding(.leading, 38)
+                        }
                     }
                     .padding(.horizontal, 12)
                 }
