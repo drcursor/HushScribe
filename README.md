@@ -148,6 +148,9 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture overview and so
 
 - [FluidAudio](https://github.com/FluidInference/FluidAudio) by FluidInference — Parakeet-TDT v3 ASR and Silero VAD, used for the default transcription model and voice activity detection across all backends.
 - [WhisperKit](https://github.com/argmaxinc/WhisperKit) by Argmax — on-device Whisper inference on Apple Silicon, used for the Whisper Base and Whisper Large v3 model options. Whisper was originally developed by [OpenAI](https://github.com/openai/whisper).
+- [mlx-swift-lm](https://github.com/ml-explore/mlx-swift-lm) and [mlx-swift](https://github.com/ml-explore/mlx-swift) by Apple — MLX inference stack for Swift, used to run LLM summary models on Apple Silicon.
+- [Qwen3](https://huggingface.co/Qwen) by Alibaba Cloud — default on-device LLM used for AI summaries.
+- [Gemma 3](https://ai.google.dev/gemma) by Google — alternative on-device LLM for AI summaries.
 - [pyannote.audio](https://github.com/pyannote/pyannote-audio) — speaker diarization model used for post-session speaker separation.
 
 ## Changelog
