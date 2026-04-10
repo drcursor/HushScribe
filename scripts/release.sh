@@ -35,12 +35,22 @@ echo "--- Step 1: Cleaning up old builds ---"
 rm -f "$DMG_NAME"
 rm -rf "$APP_BUNDLE"
 
+echo "--- Step 1.5: Compiling MLX Metal shaders ---"
+METAL_DIR=".build/checkouts/mlx-swift/Source/Cmlx/mlx-generated/metal"
+METAL_WORK=$(mktemp -d)
+for f in "$METAL_DIR"/*.metal "$METAL_DIR"/steel/attn/kernels/*.metal; do
+  name=$(basename "$f" .metal)
+  xcrun -sdk macosx metal -std=metal3.1 -I"$METAL_DIR" -c "$f" -o "$METAL_WORK/$name.air" 2>/dev/null
+done
+xcrun -sdk macosx metallib -o "$METAL_WORK/mlx.metallib" "$METAL_WORK"/*.air 2>/dev/null
+echo "MLX metallib compiled: $(ls -lh "$METAL_WORK/mlx.metallib" | awk '{print $5}')"
+
 echo "--- Step 2: Creating .app Structure ---"
-# Re-assemble your app here. Adjust 'cp' commands as needed.
 mkdir -p "$CONTENTS/MacOS"
 mkdir -p "$CONTENTS/Resources"
-# Assuming your binary is already compiled in the current folder:
 cp "$BINARY_PATH" "$CONTENTS/MacOS/HushScribe"
+cp "$METAL_WORK/mlx.metallib" "$CONTENTS/MacOS/mlx.metallib"
+rm -rf "$METAL_WORK"
 
 chmod +x "$CONTENTS/MacOS/$APP_NAME"
 
@@ -49,12 +59,11 @@ if [[ -f "$ICON_PATH" ]]; then
   echo "App icon copied"
 fi
 
-
 cp "$SWIFT_DIR/Sources/HushScribe/Info.plist" "$CONTENTS/Info.plist"
 
 echo "--- Step 3: Deep Signing with Hardened Runtime ---"
-# We sign every .dylib and .framework first, then the main app.
-find "$APP_BUNDLE" -type f \( -name "*.dylib" -o -name "*.framework" -o -name "*.so" \) -print0 | xargs -0 -I {} \
+# We sign every .dylib, .framework, .so, and .metallib first, then the main app.
+find "$APP_BUNDLE" -type f \( -name "*.dylib" -o -name "*.framework" -o -name "*.so" -o -name "*.metallib" \) -print0 | xargs -0 -I {} \
 codesign --force --options runtime --timestamp --sign "$DEVELOPER_ID" "{}"
 
 echo "Signing main executable and bundle..."
