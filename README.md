@@ -42,7 +42,7 @@ brew install --cask hushscribe
 - **No accounts, no subscriptions, no API keys, no additional background services** Download and run.
 
 ```
-speak → capture → md transcription → knowledge base
+speak → capture → md transcription → optional summary → knowledge base
 ```
 
 ## Features
