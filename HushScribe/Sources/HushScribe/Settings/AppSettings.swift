@@ -158,6 +158,12 @@ final class AppSettings {
     /// In-memory tab index for Settings navigation (not persisted).
     var preferredSettingsTab: Int = 0
 
+    /// When true, the user has acknowledged the legal disclaimer in the onboarding wizard.
+    /// Recording is blocked until this is true.
+    var hasAcknowledgedDisclaimer: Bool {
+        didSet { UserDefaults.standard.set(hasAcknowledgedDisclaimer, forKey: "hasAcknowledgedDisclaimer") }
+    }
+
     /// When true, all app windows are invisible to screen sharing / recording.
     var hideFromScreenShare: Bool {
         didSet {
@@ -200,6 +206,7 @@ final class AppSettings {
         self.preferredSettingsTab = 0
         self.vaultMeetingsPath = defaults.string(forKey: "vaultMeetingsPath") ?? NSString("~/Documents/HushScribe/Meetings").expandingTildeInPath
         self.vaultVoicePath = defaults.string(forKey: "vaultVoicePath") ?? NSString("~/Documents/HushScribe/Voice").expandingTildeInPath
+        self.hasAcknowledgedDisclaimer = defaults.bool(forKey: "hasAcknowledgedDisclaimer")
         // Default to true (hidden) if key has never been set
         if defaults.object(forKey: "hideFromScreenShare") == nil {
             self.hideFromScreenShare = true

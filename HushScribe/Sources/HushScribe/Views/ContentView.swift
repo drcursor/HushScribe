@@ -486,6 +486,10 @@ struct ContentView: View {
     // MARK: - Actions
 
     private func startSession(type: SessionType) {
+        guard settings.hasAcknowledgedDisclaimer else {
+            transcriptionEngine.lastError = "Please complete the setup wizard and acknowledge the legal disclaimer before recording."
+            return
+        }
         transcriptStore.clear()
         silenceSeconds = 0
         sessionElapsed = 0

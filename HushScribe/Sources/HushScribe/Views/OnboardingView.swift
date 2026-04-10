@@ -11,6 +11,7 @@ struct OnboardingView: View {
     @State private var micGranted = false
     @State private var screenGranted = false
     @State private var speechGranted = false
+    @State private var disclaimerAcknowledged = false
 
     private let steps: [(icon: String, title: String, body: String)] = [
         (
@@ -39,6 +40,11 @@ struct OnboardingView: View {
             "HushScribe needs a few permissions to work. Click each one to grant access."
         ),
         (
+            "exclamationmark.shield",
+            "Legal Disclaimer",
+            "Recording laws vary by jurisdiction. In many places, all parties must consent before a conversation may be recorded. It is your sole responsibility to ensure you comply with applicable local laws before using HushScribe to record any conversation."
+        ),
+        (
             "menubar.rectangle",
             "Lives in Your Menu Bar",
             "HushScribe runs quietly in the background. Use \"Show HushScribe\" from the menu bar icon any time to bring this window back."
@@ -46,6 +52,7 @@ struct OnboardingView: View {
     ]
 
     private let permissionsStepIndex = 4
+    private let disclaimerStepIndex = 5
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -82,6 +89,26 @@ struct OnboardingView: View {
                         .font(.system(size: 13, weight: .medium))
                         .toggleStyle(.switch)
                         .frame(maxWidth: 260)
+                }
+
+                if currentStep == disclaimerStepIndex {
+                    Spacer().frame(height: 16)
+                    Button {
+                        disclaimerAcknowledged.toggle()
+                        settings.hasAcknowledgedDisclaimer = disclaimerAcknowledged
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: disclaimerAcknowledged ? "checkmark.square.fill" : "square")
+                                .font(.system(size: 16))
+                                .foregroundStyle(disclaimerAcknowledged ? Color.accent1 : .secondary)
+                            Text("I understand and will comply with local recording laws")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(.leading)
+                        }
+                        .frame(maxWidth: 300, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 if currentStep == permissionsStepIndex {
@@ -124,6 +151,7 @@ struct OnboardingView: View {
                 HStack {
                     Spacer()
 
+                    let isDisclaimerBlocked = currentStep == disclaimerStepIndex && !disclaimerAcknowledged
                     Button {
                         if currentStep < steps.count - 1 {
                             withAnimation(.easeInOut(duration: 0.25)) {
@@ -138,9 +166,10 @@ struct OnboardingView: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 20)
                             .padding(.vertical, 8)
-                            .background(Color.accent1, in: RoundedRectangle(cornerRadius: 8))
+                            .background(isDisclaimerBlocked ? Color.accent1.opacity(0.35) : Color.accent1, in: RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
+                    .disabled(isDisclaimerBlocked)
                 }
             }
             .padding(28)
@@ -175,7 +204,10 @@ struct OnboardingView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bg0)
-        .onAppear(perform: refreshStatuses)
+        .onAppear {
+            refreshStatuses()
+            disclaimerAcknowledged = settings.hasAcknowledgedDisclaimer
+        }
         .onChange(of: currentStep) { _, step in
             if step == permissionsStepIndex { refreshStatuses() }
         }
