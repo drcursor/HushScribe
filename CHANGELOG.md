@@ -25,6 +25,17 @@
 - **"Experimental" label removed** from meeting auto-detection everywhere; browser-based meeting limitation noted instead.
 - **"Get Started" closes immediately.** Finishing the onboarding wizard hides the main window without delay.
 
+## [2.8.1] — 2026-04-07
+
+- **Build scripts overhaul.** Release and signing scripts fully rewritten for reliability; notarization integrated into the release pipeline.
+- **Source tree renamed.** `Tome/` → `HushScribe/`, `Sources/Tome` → `Sources/HushScribe` throughout.
+- **Website improvements.** Legal recording-consent disclaimer added; bullet lists compacted; screenshots now loaded from raw GitHub URLs; GitHub Actions static-site deployment added.
+- **Gatekeeper notes updated.** README and website updated with clearer first-launch instructions.
+
+## [2.8.0] — 2026-04-07 *(reverted)*
+
+- **Code-signed build.** Initial attempt at a notarized, Developer ID–signed DMG. Reverted in the same day due to signing pipeline issues; superseded by 2.8.1 and later 2.9.0.
+
 ## [2.9.0] — 2026-04-08
 
 - **Fix: microphone silent on system default input.** On first run (or when "System Default" is selected), the mic sometimes delivered no audio. Root causes: `defaultInputDeviceID()` could return `kAudioDeviceUnknown` (0), which was passed through to `AudioUnitSetProperty` and caused the capture stream to abort; and `AVAudioInputNode.outputFormat(forBus:)` can report `sampleRate=0`/`channelCount=0` immediately after mic permission is granted before the audio unit initialises. Fixed by: never treating device ID 0 as a valid device, and falling back to a standard 44.1 kHz/mono tap format when the engine reports an uninitialised format (AVAudioEngine converts from the real device format on start).
@@ -79,6 +90,18 @@
 - 80s-style segmented LED VU meter replaces smooth spectrum visualizer
 - Removed forced dark theme; app now follows macOS system appearance
 - Onboarding step added for menu bar usage
+
+## [2.2.0] — 2026-04-03
+
+- **Pause / resume recording.** New button next to Stop lets you pause and resume a session without ending it.
+- **Status bar menu controls.** Start, stop, pause, and resume are now available directly from the menu bar menu without opening the main window.
+- **Status bar icon reflects state.** Icon changes to indicate idle, recording, or paused.
+- **First-run model download UI.** On first launch, a prompt explains the model download before recording can begin. Download progress percentage is shown in the top bar.
+- **Input device shown in top bar.** Current microphone name is displayed during recording and at idle.
+- **Fixed window width.** Window is constrained to 320 pt wide; horizontal resizing disabled.
+- **Fix: model download reliability.** Separated disk download from in-memory loading so partially-downloaded models no longer block startup.
+- **Fix: mic device switch between sessions.** Switching input devices no longer carries state from a prior session.
+- **Fix: button crash.** Fixed an AttributeGraph corruption crash triggered by rapid button taps.
 
 ## [1.2.3] — 2026-04-02 (HushScribe rebrand)
 - Renamed project to HushScribe (fork of Tome by Gremble-io)
