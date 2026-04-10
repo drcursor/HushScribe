@@ -2,6 +2,11 @@
 
 > **Fork note:** HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io). Changes merged from the upstream Tome repository are marked with `[upstream]` in this changelog.
 
+## [2.13.0] — 2026-04-10
+
+- **Legal Disclaimer onboarding step.** A new step in the first-launch wizard displays the recording consent notice. The user must tick "I understand it's my sole responsibility to comply with local recording laws" before proceeding. Recording is blocked until acknowledged.
+- **Crash fix.** Fixed a `SIGSEGV` in `swift_task_isMainExecutorImpl` triggered by tapping a button while the deferred capture reset task was sleeping. Root cause: the task captured `TranscriptionEngine` as its executor context, leaving a dangling reference after AttributeGraph reclaimed the actor's memory. Fixed by using `Task.detached` instead.
+
 ## [2.12.0] — 2026-04-10
 
 - **AI Summaries redesign.** Transcript viewer toolbar reorganised: model and prompt dropdowns sit below the Generate Summary button, left-aligned. When Apple NL is selected, an inline warning appears next to the model picker and the custom prompt dropdown is hidden. When an LLM model is selected, the prompt dropdown appears next to the model picker.

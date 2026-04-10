@@ -101,7 +101,7 @@ struct OnboardingView: View {
                             Image(systemName: disclaimerAcknowledged ? "checkmark.square.fill" : "square")
                                 .font(.system(size: 16))
                                 .foregroundStyle(disclaimerAcknowledged ? Color.accent1 : .secondary)
-                            Text("I understand and will comply with local recording laws")
+                            Text("I understand it's my sole responsibility to comply with local recording laws")
                                 .font(.system(size: 13))
                                 .foregroundStyle(.primary)
                                 .multilineTextAlignment(.leading)
