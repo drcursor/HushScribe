@@ -1,7 +1,7 @@
 <h1 align="center">HushScribe</h1>
 
 <p align="center">
-  <strong>Local meeting transcription for macOS. No cloud. No API keys. Your data stays on your machine.</strong>
+  <strong>Local-only meeting transcription for macOS. <br>No cloud services or API keys. Your data never leaves your computer.</strong>
 </p>
 
 <p align="center">
@@ -17,7 +17,9 @@
 
 HushScribe is a macOS menu bar app that captures meetings and voice memos, transcribes them on-device, and writes structured `.md` files to a folder of your choice (eg. including your Obsidian vault).
 
-Every step runs locally. Transcription uses on-device models (Parakeet-TDT v3, WhisperKit, or Apple Speech). AI summaries are generated on-device via Qwen3, Gemma 3, or Apple's NaturalLanguage framework. No audio, no transcripts, and no data of any kind is ever sent to the internet.
+Every step runs locally. Transcription uses on-device models (Parakeet-TDT v3, WhisperKit, or Apple Speech). AI summaries are generated on-device via Qwen3, Gemma 3, or Apple's NaturalLanguage framework. 
+
+*No audio, no transcripts, and no data of any kind is ever sent to the internet.*
 
 <p align="center">
   <img src="assets/main.png" width="280" alt="HushScribe — main" style="vertical-align:middle"/>
@@ -37,7 +39,7 @@ brew install --cask hushscribe
 
 ## Why HushScribe?
 
-- **Entirely local.** Transcription and AI summary both run on-device — Parakeet, WhisperKit, Apple Speech, Qwen3, Gemma 3, and Apple's NaturalLanguage framework. Nothing ever leaves your machine.
+- **Entirely local.** Transcription and AI summary both run on-device — Parakeet, WhisperKit, Apple Speech, Qwen3, Gemma 3, and Apple's NaturalLanguage framework. Nothing ever leaves your computer.
 - **Your data, your files.** Output is plain `.md` with YAML frontmatter, timestamps, and speaker labels. No proprietary export, no lock-in, no copy-paste.
 - **No accounts, no subscriptions, no API keys, no additional background services** Download and run.
 
