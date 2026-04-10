@@ -463,7 +463,6 @@
 <!-- Features -->
 <section id="features">
   <div class="section-label">Features</div>
-  <h2>Everything you need. Nothing you don't.</h2>
   <p class="section-sub">Built for people who want clean, structured meeting notes without giving up control of their data.</p>
 
   <ul class="bullet-list">
@@ -476,6 +475,7 @@
     <li><span class="bi">⚡</span><div><strong>Auto-record meetings</strong><span>Detects active calls via app presence + mic activity. Starts and stops automatically. Browser-based meetings not supported.</span></div></li>
     <li><span class="bi">📋</span><div><strong>Vault-native output</strong><span>Structured <code>.md</code> with YAML frontmatter — drop it into Obsidian or any folder-based workflow.</span></div></li>
     <li><span class="bi">🔕</span><div><strong>Lives in the menu bar</strong><span>No dock icon. Runs quietly in the background, accessible from the menu bar at any time.</span></div></li>
+    <li><span class="bi">📦</span><div><strong>Self-contained</strong><span>No Ollama, no local server, no background daemons. Everything runs inside the app — just download and go.</span></div></li>
   </ul>
 </section>
 
@@ -486,58 +486,22 @@
   <div class="section-label">Output</div>
   <h2>Structured notes, ready to use.</h2>
   <p class="section-sub">Every session produces a single <code>.md</code> file with frontmatter, a summary, and a timestamped transcript.</p>
+  <p class="section-sub">You can also summarise sessions using local AI models using your own prompts.</p>
 
   <div class="output-wrap">
     <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/transcription.png" alt="HushScribe live transcription" />
     <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/summary.png" alt="HushScribe AI summary" />
   </div>
 
-  <pre>---
-type: meeting
-created: "2026-03-23"
-time: "10:00"
-duration: "18:42"
-source_app: "Zoom"
-attendees: ["You", "Speaker 2"]
-tags:
-  - log/meeting
-  - status/inbox
-  - source/hushscribe
----
-
-# Call Recording — 2026-03-23 10:00
-
-## Summary
-
-**Topics**
-- Product launch, QA sign-off
-
-**Highlights**
-- QA confirmed: marketing, staging.
-- Product launch discussed.
-
-**To-Dos**
-- None identified.
-
----
-
-## Transcript
-
-**You** (10:00:03)
-Morning. Quick sync on the product launch. Where are we at?
-
-**Speaker 2** (10:00:07)
-We're in good shape. QA signed off yesterday, marketing assets are locked.</pre>
-</section>
-
+  
 <hr />
 
 <!-- Install -->
 <section id="install">
   <div class="section-label">Install</div>
   <h2>Up and running in seconds.</h2>
-  <p class="section-sub">Requires macOS 26+ and Apple Silicon. Free forever — no account, no license, no recurring fees.</p>
-
+  <p class="section-sub">Requires macOS 26+ and Apple Silicon.</p>
+  <p class="section-sub"> No account, no license, no recurring fees, no catch</p>
   <div class="install-block">
     <div class="install-tab">
       <span class="active">Homebrew (recommended)</span>
