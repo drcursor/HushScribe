@@ -29,6 +29,11 @@ struct OnboardingView: View {
             "Enable \"Auto-record meetings\" from the menu bar. HushScribe watches for Zoom, Teams, Slack, and other conferencing apps — recording starts only when a call is actually in progress (mic active), and stops when the call ends. Note: browser-based meetings (e.g. Google Meet or Teams in a web browser) are not detected."
         ),
         (
+            "sparkles",
+            "AI Summaries",
+            "After a session, open the Transcript Viewer and click \"Generate Summary\" to get highlights and action items from your transcript. All models run on-device — no internet required. Download Qwen3 or Gemma 3 in Settings → Models for best results."
+        ),
+        (
             "lock.shield",
             "Permissions",
             "HushScribe needs a few permissions to work. Click each one to grant access."
@@ -40,7 +45,7 @@ struct OnboardingView: View {
         ),
     ]
 
-    private let permissionsStepIndex = 3
+    private let permissionsStepIndex = 4
 
     var body: some View {
         ZStack(alignment: .topTrailing) {

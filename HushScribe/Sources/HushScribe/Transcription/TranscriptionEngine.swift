@@ -84,6 +84,9 @@ final class TranscriptionEngine {
     /// Tracks whether user selected "System Default" (0) or a specific device.
     private var userSelectedDeviceID: AudioDeviceID = 0
 
+    /// App bundle ID used when system audio capture was last started — needed for restarts.
+    private var captureAppBundleID: String? = nil
+
     /// Listens for default input device changes at the OS level.
     private var defaultDeviceListenerBlock: AudioObjectPropertyListenerBlock?
 
@@ -377,6 +380,7 @@ final class TranscriptionEngine {
         let micStream = micCapture.bufferStream(deviceID: targetMicID)
 
         // 3. Start system audio capture
+        captureAppBundleID = appBundleID
         diagLog("[ENGINE-4] starting system audio capture...")
         let sysStreams: SystemAudioCapture.CaptureStreams?
         do {
@@ -447,6 +451,14 @@ final class TranscriptionEngine {
         assetStatus = "Transcribing (\(selectedModel.displayName))"
         diagLog("[ENGINE-6] all transcription tasks started")
 
+        // Reset capture pipelines shortly after start to flush any residual audio state.
+        let startDeviceID = inputDeviceID
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            guard let self, self.isRunning else { return }
+            await self.resetCapture(inputDeviceID: startDeviceID)
+        }
+
         // Install CoreAudio listener for default input device changes
         installDefaultDeviceListener()
     }
@@ -515,6 +527,102 @@ final class TranscriptionEngine {
         }
 
         diagLog("[ENGINE-MIC-SWAP] mic restarted on device \(resolvedTarget)")
+    }
+
+    /// Force-restart both mic and system audio capture pipelines without stopping the session.
+    /// Unlike restartMic, this bypasses the same-device guard and also tears down sys audio.
+    func resetCapture(inputDeviceID: AudioDeviceID) async {
+        guard isRunning else { return }
+        diagLog("[ENGINE-RESET] full capture reset requested")
+        lastError = nil
+
+        let backend: any ASRBackend
+        if selectedModel.isWhisperKit, let wk = whisperKitBackend {
+            backend = wk
+        } else if selectedModel.isAppleSpeech, let sf = sfSpeechBackend {
+            backend = sf
+        } else if let asr = asrManager {
+            backend = FluidAudioASRBackend(manager: asr)
+        } else {
+            diagLog("[ENGINE-RESET] no backend available, aborting")
+            return
+        }
+
+        guard let micVadManager, let sysVadManager else { return }
+
+        // --- Mic ---
+        userSelectedDeviceID = inputDeviceID
+        let targetMicID: AudioDeviceID? = inputDeviceID > 0 ? inputDeviceID : MicCapture.defaultInputDeviceID()
+        currentMicDeviceID = targetMicID ?? 0
+
+        micTask?.cancel()
+        micTask = nil
+        micCapture.stopForSwitch()
+
+        let micStream = micCapture.bufferStream(deviceID: targetMicID)
+        let store = transcriptStore
+        let micTranscriber = StreamingTranscriber(
+            asrBackend: backend,
+            vadManager: micVadManager,
+            speaker: .you,
+            audioSource: .microphone,
+            onPartial: { text in Task { @MainActor in store.volatileYouText = text } },
+            onFinal: { text in
+                Task { @MainActor in
+                    store.volatileYouText = ""
+                    store.append(Utterance(text: text, speaker: .you))
+                }
+            }
+        )
+        let reportMicError: @Sendable (String) -> Void = { [weak self] msg in
+            Task { @MainActor in self?.lastError = msg }
+        }
+        micTask = Task.detached {
+            let hadFatalError = await micTranscriber.run(stream: micStream)
+            if hadFatalError { reportMicError("Mic transcription failed — restart session") }
+        }
+        diagLog("[ENGINE-RESET] mic restarted on device \(currentMicDeviceID)")
+
+        // --- System audio ---
+        sysTask?.cancel()
+        sysTask = nil
+        await systemCapture.stop()
+
+        let sysStreams: SystemAudioCapture.CaptureStreams?
+        do {
+            sysStreams = try await systemCapture.bufferStream(appBundleID: captureAppBundleID)
+            diagLog("[ENGINE-RESET] system audio restarted")
+        } catch {
+            let msg = "System audio restart failed: \(error.localizedDescription)"
+            diagLog("[ENGINE-RESET] \(msg)")
+            lastError = msg
+            sysStreams = nil
+        }
+
+        if let sysStream = sysStreams?.systemAudio {
+            let sysTranscriber = StreamingTranscriber(
+                asrBackend: backend,
+                vadManager: sysVadManager,
+                speaker: .them,
+                audioSource: .system,
+                onPartial: { text in Task { @MainActor in store.volatileThemText = text } },
+                onFinal: { text in
+                    Task { @MainActor in
+                        store.volatileThemText = ""
+                        store.append(Utterance(text: text, speaker: .them))
+                    }
+                }
+            )
+            let reportSysError: @Sendable (String) -> Void = { [weak self] msg in
+                Task { @MainActor in self?.lastError = msg }
+            }
+            sysTask = Task.detached {
+                let hadFatalError = await sysTranscriber.run(stream: sysStream)
+                if hadFatalError { reportSysError("System audio transcription failed — restart session") }
+            }
+        }
+
+        diagLog("[ENGINE-RESET] full capture reset complete")
     }
 
     // MARK: - Default Device Listener

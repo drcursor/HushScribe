@@ -37,6 +37,7 @@ struct ContentView: View {
     @State private var bannerDismissTask: Task<Void, Never>?
     @State private var sessionElapsed: Int = 0
     @State private var inputDevices: [(id: AudioDeviceID, name: String)] = []
+    @State private var logoFlash = false
     @State private var showSpeakerNaming = false
     @State private var speakerLabelsForNaming: [String] = []
     @State private var speakerPreviewsForNaming: [String: [String]] = [:]
@@ -243,7 +244,16 @@ struct ContentView: View {
             Text("HUSHSCRIBE")
                 .font(.system(size: 14, weight: .heavy))
                 .tracking(3)
-                .foregroundStyle(Color.fg1)
+                .foregroundStyle(logoFlash ? Color.accent1 : Color.fg1)
+                .onTapGesture(count: 3) {
+                    guard isRunning else { return }
+                    withAnimation(.easeIn(duration: 0.1)) { logoFlash = true }
+                    Task {
+                        await transcriptionEngine.resetCapture(inputDeviceID: settings.inputDeviceID)
+                        try? await Task.sleep(for: .milliseconds(400))
+                        withAnimation(.easeOut(duration: 0.3)) { logoFlash = false }
+                    }
+                }
 
             Spacer()
 

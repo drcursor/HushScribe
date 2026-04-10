@@ -15,7 +15,7 @@ struct SettingsView: View {
             MeetingDetectionSettingsTab(settings: settings)
                 .tabItem { Label("Meetings", systemImage: "person.2") }
                 .tag(1)
-            ModelsSettingsTab(settings: settings, engine: engine)
+            ModelsSettingsTab(settings: settings, engine: engine, llmEngine: LLMSummaryEngine.shared)
                 .tabItem { Label("Models", systemImage: "cpu") }
                 .tag(2)
             OutputSettingsTab(settings: settings)
@@ -25,7 +25,7 @@ struct SettingsView: View {
                 .tabItem { Label("Privacy", systemImage: "lock.shield") }
                 .tag(4)
         }
-        .frame(width: 540, height: 560)
+        .frame(width: 540, height: 460)
         .onAppear { selectedTab = settings.preferredSettingsTab }
         .onChange(of: settings.preferredSettingsTab) { _, tab in selectedTab = tab }
     }
@@ -146,6 +146,32 @@ private struct MeetingDetectionSettingsTab: View {
 private struct ModelsSettingsTab: View {
     @Bindable var settings: AppSettings
     var engine: TranscriptionEngine
+    var llmEngine: LLMSummaryEngine
+    @State private var modelSubTab = 0
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Picker("", selection: $modelSubTab) {
+                Text("Transcription").tag(0)
+                Text("AI Summaries").tag(1)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 4)
+
+            if modelSubTab == 0 {
+                TranscriptionModelsSubTab(settings: settings, engine: engine)
+            } else {
+                SummaryModelsSubTab(settings: settings, llmEngine: llmEngine)
+            }
+        }
+    }
+}
+
+private struct TranscriptionModelsSubTab: View {
+    @Bindable var settings: AppSettings
+    var engine: TranscriptionEngine
 
     var body: some View {
         Form {
@@ -154,13 +180,168 @@ private struct ModelsSettingsTab: View {
                     ModelRow(model: model, settings: settings, engine: engine)
                 }
             } header: {
-                Text("All models run entirely on-device. No audio or data leaves your Mac.")
+                Text("Convert speech to text. All models run on-device via Apple Silicon.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .textCase(nil)
+                    .padding(.bottom, 2)
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+private struct SummaryModelsSubTab: View {
+    @Bindable var settings: AppSettings
+    var llmEngine: LLMSummaryEngine
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(SummaryModel.allCases, id: \.self) { model in
+                    SummaryModelRow(model: model, settings: settings, llmEngine: llmEngine)
+                }
+            } header: {
+                Text("Generate highlights and to-dos from transcripts. All models run on-device.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .textCase(nil)
+                    .padding(.bottom, 2)
+            }
+
+            // Apple NL warning
+            if settings.summaryModel.isBuiltIn {
+                Section {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                            .font(.system(size: 13))
+                        Text("Apple NL produces keyword-based output and is usually not satisfactory. Download and use Qwen3 or Gemma 3 for better results.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+
+            Section("Generation") {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Temperature")
+                            .font(.system(size: 12))
+                        Spacer()
+                        Text(String(format: "%.2f", settings.summaryTemperature))
+                            .font(.system(size: 12, weight: .medium).monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: $settings.summaryTemperature, in: 0.0...1.0, step: 0.05)
+                }
+                .disabled(settings.summaryModel.isBuiltIn)
+                Text("Controls how creative vs. deterministic the summary is. Lower values produce more focused output; higher values more varied. Has no effect on the built-in Apple NL model.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+
+                Stepper(
+                    "Max tokens: \(settings.summaryMaxTokens)",
+                    value: $settings.summaryMaxTokens,
+                    in: 500...16000,
+                    step: 500
+                )
+                .font(.system(size: 12))
+                .disabled(settings.summaryModel.isBuiltIn)
+                Text("Maximum number of tokens the model can generate. Higher values allow longer summaries but take more time. Default: 4000.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                ForEach(0..<3) { i in
+                    CustomPromptRow(index: i, prompt: $settings.customSummaryPrompts[i])
+                }
+            } header: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("CUSTOM PROMPTS")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.accent1)
+                    Text("Define up to 3 named system prompts. A named prompt appears in the transcript viewer's prompt picker.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                .textCase(nil)
+                .padding(.bottom, 2)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+private struct CustomPromptRow: View {
+    let index: Int
+    @Binding var prompt: CustomSummaryPrompt
+
+    private static let namePlaceholders = [
+        "e.g. Action items only",
+        "e.g. Executive summary",
+        "e.g. Technical notes",
+    ]
+
+    private static let bodyPlaceholders = [
+        "e.g. List only action items and decisions. Skip pleasantries and small talk.",
+        "e.g. Write a 3-sentence executive summary of the key outcomes and next steps.",
+        "e.g. Extract technical decisions, architecture choices, and any bugs discussed.",
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Custom Prompt \(index + 1)")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("Name")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 48, alignment: .trailing)
+                TextField(
+                    "",
+                    text: $prompt.name,
+                    prompt: Text(Self.namePlaceholders[index])
+                        .italic()
+                        .foregroundStyle(Color(NSColor.placeholderTextColor))
+                )
+                .font(.system(size: 12))
+                .textFieldStyle(.roundedBorder)
+            }
+
+            HStack(alignment: .top, spacing: 8) {
+                Text("Prompt")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 48, alignment: .trailing)
+                    .fixedSize()
+                    .padding(.top, 4)
+                ZStack(alignment: .topLeading) {
+                    if prompt.body.isEmpty {
+                        Text(Self.bodyPlaceholders[index])
+                            .font(.system(size: 11))
+                            .italic()
+                            .foregroundStyle(Color(NSColor.placeholderTextColor))
+                            .padding(.horizontal, 5)
+                            .padding(.top, 5)
+                            .allowsHitTesting(false)
+                    }
+                    TextEditor(text: $prompt.body)
+                        .font(.system(size: 11))
+                        .frame(minHeight: 72, maxHeight: 120)
+                        .scrollContentBackground(.hidden)
+                }
+                .background(Color(NSColor.textBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color(NSColor.separatorColor)))
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 
@@ -169,6 +350,8 @@ private struct ModelRow: View {
     @Bindable var settings: AppSettings
     var engine: TranscriptionEngine
     @State private var isDownloaded = false
+
+    private var isActive: Bool { settings.transcriptionModel == model }
 
     private var isDownloading: Bool {
         switch model {
@@ -179,12 +362,13 @@ private struct ModelRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .center, spacing: 12) {
+                // Name + description
+                VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text(model.displayName)
                             .font(.system(size: 13, weight: .medium))
-                        if settings.transcriptionModel == model {
+                        if isActive {
                             Text("Active")
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundStyle(Color.accentColor)
@@ -196,22 +380,19 @@ private struct ModelRow: View {
                     Text(model.settingsDescription)
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: 6) {
-                    statusBadge
-                    HStack(spacing: 8) {
-                        downloadButton
-                        useButton
-                    }
-                }
+                // Single contextual action area — one clear state at a time
+                actionArea
             }
 
             if isDownloading {
                 ProgressView(engine.assetStatus)
-                    .font(.system(size: 11))
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
                     .progressViewStyle(.linear)
             }
         }
@@ -222,36 +403,25 @@ private struct ModelRow: View {
     }
 
     @ViewBuilder
-    private var statusBadge: some View {
-        switch model {
-        case .appleSpeech:
-            Text("Built-in")
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
-        default:
-            if isDownloading {
-                EmptyView()
-            } else if isDownloaded {
-                Label("Downloaded", systemImage: "checkmark.circle.fill")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.green)
-                    .labelStyle(.titleAndIcon)
-            } else {
-                Text(model.sizeLabel)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
+    private var actionArea: some View {
+        if isDownloading {
+            ProgressView()
+                .controlSize(.small)
+        } else if model.isAppleSpeech {
+            // Built-in: no download needed, just Use or nothing
+            if !isActive {
+                useButton
             }
-        }
-    }
+        } else if isDownloaded {
+            HStack(spacing: 10) {
+                Text(model.sizeLabel)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
 
-    @ViewBuilder
-    private var downloadButton: some View {
-        if !model.isAppleSpeech && !isDownloading {
-            if isDownloaded {
                 Button("Remove") {
                     engine.removeModel(model)
                     isDownloaded = false
-                    if settings.transcriptionModel == model {
+                    if isActive {
                         settings.transcriptionModel = .parakeet
                         engine.setModel(.parakeet)
                     }
@@ -260,34 +430,131 @@ private struct ModelRow: View {
                 .foregroundStyle(.red)
                 .buttonStyle(.plain)
                 .disabled(engine.isRunning)
-            } else {
-                Button("Download") {
-                    Task { await engine.downloadModel(model) }
+
+                if !isActive {
+                    useButton
                 }
-                .font(.system(size: 11))
-                .buttonStyle(.plain)
-                .foregroundStyle(Color.accentColor)
             }
+        } else {
+            // Not downloaded: show size + download
+            Button("Download  \(model.sizeLabel)") {
+                Task { await engine.downloadModel(model) }
+            }
+            .font(.system(size: 11))
+            .foregroundStyle(Color.accentColor)
+            .buttonStyle(.plain)
         }
     }
 
-    @ViewBuilder
     private var useButton: some View {
-        let isActive = settings.transcriptionModel == model
-        let canUse = model.isAppleSpeech || isDownloaded
-        if !isActive && !isDownloading {
-            Button("Use") {
-                settings.transcriptionModel = model
-                engine.setModel(model)
-            }
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(canUse ? .white : Color.secondary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(canUse ? Color.accentColor : Color.secondary.opacity(0.15), in: RoundedRectangle(cornerRadius: 5))
-            .buttonStyle(.plain)
-            .disabled(!canUse || engine.isRunning)
+        Button("Use") {
+            settings.transcriptionModel = model
+            engine.setModel(model)
         }
+        .font(.system(size: 11, weight: .semibold))
+        .foregroundStyle(.white)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 5))
+        .buttonStyle(.plain)
+        .disabled(engine.isRunning)
+    }
+}
+
+// MARK: - Summary Model Row
+
+private struct SummaryModelRow: View {
+    let model: SummaryModel
+    @Bindable var settings: AppSettings
+    var llmEngine: LLMSummaryEngine
+    @State private var isDownloaded = false
+
+    private var isActive: Bool { settings.summaryModel == model }
+    private var isDownloading: Bool { llmEngine.downloadingModel == model }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(model.displayName)
+                            .font(.system(size: 13, weight: .medium))
+                        if isActive {
+                            Text("Active")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(Color.accentColor)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.accentColor.opacity(0.12), in: Capsule())
+                        }
+                    }
+                    Text(model.settingsDescription)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+                actionArea
+            }
+
+            if isDownloading {
+                ProgressView(value: llmEngine.downloadProgress)
+                    .progressViewStyle(.linear)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 2)
+        .onAppear { isDownloaded = llmEngine.isModelDownloaded(model) }
+        .onChange(of: llmEngine.downloadingModel) { _, _ in isDownloaded = llmEngine.isModelDownloaded(model) }
+    }
+
+    @ViewBuilder
+    private var actionArea: some View {
+        if isDownloading {
+            ProgressView()
+                .controlSize(.small)
+        } else if model.isBuiltIn {
+            if !isActive {
+                useButton
+            }
+        } else if isDownloaded {
+            HStack(spacing: 10) {
+                Text(model.sizeLabel)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+                Button("Remove") {
+                    llmEngine.removeModel(model)
+                    isDownloaded = false
+                    if isActive { settings.summaryModel = .appleNL }
+                }
+                .font(.system(size: 11))
+                .foregroundStyle(.red)
+                .buttonStyle(.plain)
+
+                if !isActive { useButton }
+            }
+        } else {
+            Button("Download  \(model.sizeLabel)") {
+                Task { await llmEngine.downloadModel(model) }
+            }
+            .font(.system(size: 11))
+            .foregroundStyle(Color.accentColor)
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var useButton: some View {
+        Button("Use") {
+            settings.summaryModel = model
+        }
+        .font(.system(size: 11, weight: .semibold))
+        .foregroundStyle(.white)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 5))
+        .buttonStyle(.plain)
     }
 }
 

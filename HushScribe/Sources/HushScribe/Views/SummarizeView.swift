@@ -2,13 +2,15 @@ import SwiftUI
 import AppKit
 
 struct SummarizeView: View {
-    let settings: AppSettings
+    @Bindable var settings: AppSettings
     let logger: TranscriptLogger
 
     @State private var transcriptURL: URL?
     @State private var transcriptText = ""
     @State private var parsedUtterances: [ParsedUtterance] = []
     @State private var summary: String? = nil
+    @State private var thinkingContent: String? = nil
+    @State private var showThinking = false
     @State private var isGenerating = false
     @State private var isSaving = false
     @State private var savedConfirmation = false
@@ -97,31 +99,83 @@ struct SummarizeView: View {
     // MARK: - Toolbar
 
     private var toolbar: some View {
-        HStack(spacing: 10) {
-            Button {
-                generate()
-            } label: {
-                if isGenerating {
-                    HStack(spacing: 6) {
-                        ProgressView().controlSize(.small)
-                        Text("Generating…")
+        VStack(alignment: .leading, spacing: 0) {
+            // Row 1: Generate + Browse
+            HStack(spacing: 10) {
+                Button {
+                    generate()
+                } label: {
+                    if isGenerating {
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.small)
+                            let status = LLMSummaryEngine.shared.generationStatus
+                            Text(status.isEmpty ? "Generating…" : status)
+                        }
+                    } else {
+                        Label("Generate Summary", systemImage: "sparkles")
                     }
-                } else {
-                    Label("Generate Summary", systemImage: "sparkles")
+                }
+                .disabled(isGenerating || transcriptText.isEmpty)
+
+                Spacer()
+
+                Button {
+                    showPicker = true
+                } label: {
+                    Label("Browse Transcripts", systemImage: "doc.badge.plus")
                 }
             }
-            .disabled(isGenerating || transcriptText.isEmpty)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
 
-            Spacer()
+            // Row 2: Model picker + inline warning or prompt picker
+            HStack(spacing: 8) {
+                Picker("", selection: $settings.summaryModel) {
+                    ForEach(SummaryModel.allCases, id: \.self) { model in
+                        Group {
+                            if !model.isBuiltIn && !LLMSummaryEngine.shared.isModelDownloaded(model) {
+                                Text("\(model.displayName) · not downloaded")
+                            } else {
+                                Text(model.displayName)
+                            }
+                        }
+                        .tag(model)
+                    }
+                }
+                .frame(width: 200)
+                .disabled(isGenerating)
 
-            Button {
-                showPicker = true
-            } label: {
-                Label("Browse Transcripts", systemImage: "doc.badge.plus")
+                if settings.summaryModel.isBuiltIn {
+                    // Inline Apple NL warning
+                    HStack(spacing: 5) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text("Results are usually not satisfactory. Use Qwen3 or Gemma 3.")
+                            .foregroundStyle(.secondary)
+                    }
+                    .font(.system(size: 11))
+                } else {
+                    // Prompt picker — default + named custom prompts
+                    let namedCustoms = settings.customSummaryPrompts.enumerated()
+                        .filter { !$0.element.isEmpty }
+                    if !namedCustoms.isEmpty || settings.selectedSummaryPrompt != .default {
+                        Picker("", selection: $settings.selectedSummaryPrompt) {
+                            Text("Default prompt").tag(SummaryPromptSelection.default)
+                            ForEach(Array(namedCustoms), id: \.offset) { i, prompt in
+                                Text(prompt.name).tag(SummaryPromptSelection.custom(i))
+                            }
+                        }
+                        .frame(width: 160)
+                        .disabled(isGenerating)
+                    }
+                }
+
+                Spacer()
             }
+            .padding(.bottom, 8)
+            .padding(.leading, -22) // manual alignment, avoid changing!
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 8)
         .background(.bar)
     }
 
@@ -207,6 +261,17 @@ struct SummarizeView: View {
 
                 Spacer()
 
+                if thinkingContent != nil {
+                    Button {
+                        showThinking = true
+                    } label: {
+                        Label("Thinking", systemImage: "brain")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Color.accent1)
+                    }
+                    .buttonStyle(.plain)
+                }
+
                 Button {
                     withAnimation(.easeInOut(duration: 0.15)) { summaryRendered.toggle() }
                 } label: {
@@ -242,6 +307,9 @@ struct SummarizeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: 220)
         .background(Color(NSColor.controlBackgroundColor))
+        .sheet(isPresented: $showThinking) {
+            ThinkingSheetView(content: thinkingContent ?? "")
+        }
     }
 
     // MARK: - Actions
@@ -273,14 +341,65 @@ struct SummarizeView: View {
         savedConfirmation = false
         savedFilename = ""
         summaryRendered = true
+        thinkingContent = nil
         let text = transcriptText
-        Task.detached {
-            let result = SummaryService.summarize(transcript: text)
-            await MainActor.run {
+        let chosenModel = settings.summaryModel
+        let llm = LLMSummaryEngine.shared
+        let chosenSystemPrompt: String? = {
+            guard case .custom(let i) = settings.selectedSummaryPrompt,
+                  i < settings.customSummaryPrompts.count,
+                  !settings.customSummaryPrompts[i].body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            else { return nil }
+            return settings.customSummaryPrompts[i].body
+        }()
+
+        Task {
+            if chosenModel.isBuiltIn {
+                let result = await Task.detached { SummaryService.summarize(transcript: text) }.value
                 summary = result
+                isGenerating = false
+            } else {
+                do {
+                    try await llm.loadContainer(for: chosenModel)
+                    let effectivePrompt = chosenSystemPrompt ?? LLMSummaryEngine.defaultSystemPrompt
+                    let isCustomPrompt = chosenSystemPrompt != nil
+                    var output = try await llm.summarize(transcript: text, temperature: Float(settings.summaryTemperature), maxTokens: settings.summaryMaxTokens, systemPrompt: chosenSystemPrompt)
+                    var attempts = 1
+                    while isPromptEcho(output.summary, prompt: effectivePrompt, isCustomPrompt: isCustomPrompt), attempts < 5 {
+                        output = try await llm.summarize(transcript: text, temperature: Float(settings.summaryTemperature), maxTokens: settings.summaryMaxTokens, systemPrompt: chosenSystemPrompt)
+                        attempts += 1
+                    }
+                    summary = output.summary
+                    thinkingContent = output.thinking
+                } catch {
+                    summary = "Summary generation failed: \(error.localizedDescription)"
+                }
                 isGenerating = false
             }
         }
+    }
+
+    /// Returns true if the model echoed back the system prompt instead of summarising.
+    private func isPromptEcho(_ result: String, prompt: String, isCustomPrompt: Bool) -> Bool {
+        let r = result.trimmingCharacters(in: .whitespacesAndNewlines)
+        if r.isEmpty { return true }
+        let p = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        if r == p || p.contains(r) { return true }
+
+        if isCustomPrompt {
+            // Custom prompt: check if result starts with the first 60 chars of the prompt
+            let prefix = String(p.prefix(50))
+            if !prefix.isEmpty && r.hasPrefix(prefix) { return true }
+        } else {
+            // Default system prompt: check the first 60 chars of the Highlights and To-Dos sections
+            for marker in ["**Highlights**", "**To-Dos**"] {
+                if let range = p.range(of: marker) {
+                    let section = String(p[range.lowerBound...].prefix(30))
+                    if !section.isEmpty && r.contains(section) { return true }
+                }
+            }
+        }
+        return false
     }
 
     @MainActor
@@ -371,6 +490,39 @@ struct ParsedUtterance: Identifiable {
     }
 }
 
+// MARK: - Thinking Sheet
+
+private struct ThinkingSheetView: View {
+    let content: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Label("Thinking", systemImage: "brain")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            Divider()
+
+            ScrollView {
+                Text(content)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .textSelection(.enabled)
+            }
+        }
+        .frame(width: 560, height: 400)
+    }
+}
+
 // MARK: - Parsed Bubble
 
 private struct ParsedBubble: View {
@@ -450,17 +602,18 @@ struct TranscriptPickerView: View {
         let fileSize: Int
     }
 
-    private var filteredMeetings: [TranscriptFile] {
-        guard typeFilter != .voice else { return [] }
-        return meetingFiles.filter { matchesDate($0.modifiedDate) }
+    private var filteredFiles: [(file: TranscriptFile, isMeeting: Bool)] {
+        var result: [(TranscriptFile, Bool)] = []
+        if typeFilter != .voice {
+            result += meetingFiles.filter { matchesDate($0.modifiedDate) }.map { ($0, true) }
+        }
+        if typeFilter != .meetings {
+            result += voiceFiles.filter { matchesDate($0.modifiedDate) }.map { ($0, false) }
+        }
+        return result.sorted { $0.0.modifiedDate > $1.0.modifiedDate }
     }
 
-    private var filteredVoice: [TranscriptFile] {
-        guard typeFilter != .meetings else { return [] }
-        return voiceFiles.filter { matchesDate($0.modifiedDate) }
-    }
-
-    private var isEmpty: Bool { filteredMeetings.isEmpty && filteredVoice.isEmpty }
+    private var isEmpty: Bool { filteredFiles.isEmpty }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -518,19 +671,8 @@ struct TranscriptPickerView: View {
                 .padding()
             } else {
                 List {
-                    if !filteredMeetings.isEmpty {
-                        Section {
-                            ForEach(filteredMeetings) { fileRow($0) }
-                        } header: {
-                            Label("Meetings", systemImage: "person.2")
-                        }
-                    }
-                    if !filteredVoice.isEmpty {
-                        Section {
-                            ForEach(filteredVoice) { fileRow($0) }
-                        } header: {
-                            Label("Voice Memos", systemImage: "mic")
-                        }
+                    ForEach(filteredFiles, id: \.file.id) { entry in
+                        fileRow(entry.file, isMeeting: entry.isMeeting)
                     }
                 }
                 .listStyle(.inset)
@@ -540,14 +682,14 @@ struct TranscriptPickerView: View {
         .onAppear { loadFiles() }
     }
 
-    private func fileRow(_ file: TranscriptFile) -> some View {
+    private func fileRow(_ file: TranscriptFile, isMeeting: Bool) -> some View {
         Button {
             onSelect(file.url)
             dismiss()
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "doc.text")
-                    .font(.system(size: 13))
+                Image(systemName: isMeeting ? "person.2" : "mic")
+                    .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .frame(width: 18)
                 VStack(alignment: .leading, spacing: 2) {

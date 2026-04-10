@@ -438,6 +438,7 @@
     <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/main.png" alt="HushScribe main window" />
     <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/capturing.png" alt="HushScribe capturing a session" />
     <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/speakers.png" alt="HushScribe speaker naming" />
+    <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/settings.png" alt="HushScribe settings" />
   </div>
 </div>
 
@@ -451,7 +452,7 @@
 
   <ul class="bullet-list">
     <li><span class="bi">🎙️</span><div><strong>Audio never touches a server</strong><span>Transcription runs on-device via Apple Silicon. Your voice stays on your machine, always.</span></div></li>
-    <li><span class="bi">🤖</span><div><strong>AI that stays local</strong><span>Post-session summaries use Apple's NaturalLanguage framework — no external API, no API key, no network call.</span></div></li>
+    <li><span class="bi">🤖</span><div><strong>AI that stays local</strong><span>Summaries run on-device via Qwen3, Gemma 3, or Apple's NaturalLanguage framework — no external API, no API key, no network call.</span></div></li>
     <li><span class="bi">📁</span><div><strong>You own the output</strong><span>Transcripts are plain <code>.md</code> files in a folder you choose. No proprietary format, no lock-in.</span></div></li>
     <li><span class="bi">🚫</span><div><strong>No telemetry</strong><span>No analytics, no crash reporting, no usage tracking. Zero network requests at runtime.</span></div></li>
     <li><span class="bi">🖥️</span><div><strong>Hidden from screen sharing</strong><span>The app window is invisible to screen recording by default — it won't appear on your call.</span></div></li>
@@ -472,7 +473,7 @@
     <li><span class="bi">🧠</span><div><strong>Multiple transcription models</strong><span>Parakeet (default), WhisperKit Base, WhisperKit Large v3, or Apple Speech. All on-device.</span></div></li>
     <li><span class="bi">📞</span><div><strong>Call Capture</strong><span>Captures mic + system audio. Detects your conferencing app (Teams, Zoom, Slack…) and filters to just that source.</span></div></li>
     <li><span class="bi">🎤</span><div><strong>Voice Memo mode</strong><span>Mic-only recording saved to a separate folder — voice notes never mix with meeting transcripts.</span></div></li>
-    <li><span class="bi">✨</span><div><strong>On-device AI summary</strong><span>Topics, Highlights, and To-Dos appended to each transcript. Generated locally, no API required.</span></div></li>
+    <li><span class="bi">✨</span><div><strong>On-device AI summary</strong><span>Open any transcript and click Generate Summary. Qwen3 0.6B, Gemma 3 1B, or Apple NL — all local, no API key. Supports custom prompts.</span></div></li>
     <li><span class="bi">👥</span><div><strong>Speaker diarization</strong><span>Splits remote audio into labelled speakers after the session. Assign real names before saving.</span></div></li>
     <li><span class="bi">⚡</span><div><strong>Auto-record meetings</strong><span>Detects active calls via app presence + mic activity. Starts and stops automatically. Browser-based meetings not supported.</span></div></li>
     <li><span class="bi">📋</span><div><strong>Vault-native output</strong><span>Structured <code>.md</code> with YAML frontmatter — drop it into Obsidian or any folder-based workflow.</span></div></li>
@@ -489,8 +490,8 @@
   <p class="section-sub">Every session produces a single <code>.md</code> file with frontmatter, a summary, and a timestamped transcript.</p>
 
   <div class="output-wrap">
-    <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/screenshot-vault-frontmatter.png" alt="Vault note with YAML frontmatter" />
-    <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/screenshot-vault-transcript.png" alt="Vault note transcript view" />
+    <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/transcription.png" alt="HushScribe live transcription" />
+    <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/summary.png" alt="HushScribe AI summary" />
   </div>
 
   <pre>---

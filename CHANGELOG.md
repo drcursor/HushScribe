@@ -2,6 +2,14 @@
 
 > **Fork note:** HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io). Changes merged from the upstream Tome repository are marked with `[upstream]` in this changelog.
 
+## [2.12.0] — 2026-04-10
+
+- **AI Summaries redesign.** Transcript viewer toolbar reorganised: model and prompt dropdowns sit below the Generate Summary button, left-aligned. When Apple NL is selected, an inline warning appears next to the model picker and the custom prompt dropdown is hidden. When an LLM model is selected, the prompt dropdown appears next to the model picker.
+- **Custom prompt editor improved.** Slots renamed "Custom Prompt 1/2/3". The "Prompt" label no longer wraps. Name and body placeholders are now italic, distinct per slot, and visually styled as examples.
+- **AI Summaries onboarding step.** New step in the first-launch wizard explains the Transcript Viewer and Generate Summary feature.
+- **Menu bar icon.** Changed from pencil to quote.bubble.
+- **Transcript browser: latest first.** File browser now shows all transcripts in a single date-sorted list (newest first) with type icons (meeting / voice memo), replacing the fixed Meetings / Voice Memos section split.
+
 ## [2.11.0] — 2026-04-09
 
 - **Transcript Viewer.** Dedicated window for browsing, previewing and summarising saved transcripts. Accessible from the toolbar and the menu bar ("Transcript Viewer…"). Includes a file picker with type filter (All / Meetings / Voice Memos) and date filter (All Time / Today / This Week / This Month), with file sizes shown. Speaker bubbles use the same colours as the live recording view.

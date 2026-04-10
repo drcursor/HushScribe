@@ -17,12 +17,14 @@
 
 HushScribe is a macOS menu bar app that captures meetings and voice memos, transcribes them on-device, and writes structured `.md` files to a folder of your choice (eg. including your Obsidian vault).
 
-Every step runs locally. Transcription uses on-device models (Parakeet-TDT v3, WhisperKit, or Apple Speech). The AI summary is generated on-device via Apple's NaturalLanguage framework. No audio, no transcripts, and no data of any kind is ever sent to the internet.
+Every step runs locally. Transcription uses on-device models (Parakeet-TDT v3, WhisperKit, or Apple Speech). AI summaries are generated on-device via Qwen3, Gemma 3, or Apple's NaturalLanguage framework. No audio, no transcripts, and no data of any kind is ever sent to the internet.
 
 <p align="center">
   <img src="assets/main.png" width="280" alt="HushScribe — main" />
-  <img src="assets/capturing.png" width="280" alt="HushScribe — capturing" />
-  <img src="assets/speakers.png" width="280" alt="HushScribe — speaker naming" />
+</p>
+<p align="center">
+  <img src="assets/speakers.png" width="280" alt="HushScribe — speaker naming" style="vertical-align:middle" />
+  <img src="assets/settings.png" width="280" alt="HushScribe — settings" style="vertical-align:middle" />
 </p>
 
 ## Installing
@@ -38,7 +40,7 @@ brew install --cask hushscribe
 
 ## Why HushScribe?
 
-- **Entirely local.** Transcription and AI summary both run on-device — Parakeet, WhisperKit, Apple Speech, and Apple's NaturalLanguage framework. Nothing ever leaves your machine.
+- **Entirely local.** Transcription and AI summary both run on-device — Parakeet, WhisperKit, Apple Speech, Qwen3, Gemma 3, and Apple's NaturalLanguage framework. Nothing ever leaves your machine.
 - **Your data, your files.** Output is plain `.md` with YAML frontmatter, timestamps, and speaker labels. No proprietary export, no lock-in, no copy-paste.
 - **No accounts, no subscriptions, no API keys, no additional background services** Download and run.
 
@@ -53,7 +55,7 @@ speak → capture → md transcription → knowledge base
 - **Auto-record meetings.** Enable from the menu bar — recording starts automatically when a meeting app (Zoom, Teams, Slack, FaceTime, Webex, Discord, Google Meet, Loom) is running and the microphone is actively in use. Stops automatically when the call ends; configurable stop delay in Settings. Note: browser-based meetings (e.g. Google Meet in a browser) are not detected.
 - **Call Capture** grabs mic + system audio. Detects which conferencing app you're in (Teams, Zoom, Slack, etc.) and filters audio to just that app.
 - **Voice Memo** is mic-only. Saves to a separate folder so it doesn't clutter your meeting transcripts.
-- **On-device AI summary.** Each transcript includes a Summary section with Topics, Highlights, and To-Dos, generated locally using Apple's NaturalLanguage framework — no API key, no network. (Experimental)
+- **On-device AI summary.** Open any transcript in the Transcript Viewer and click "Generate Summary" to get Highlights and To-Dos. Choose from Qwen3 0.6B, Gemma 3 1B (downloadable), or the built-in Apple NaturalLanguage model. All run entirely on-device — no API key, no network. Supports custom system prompts.
 - **Speaker diarization** runs after the call ends. Splits remote audio into labelled speakers; post-session prompt lets you assign real names.
 - **Split VU meters.** Separate level meters for microphone and system audio, each with an independent mute toggle.
 - **Obsidian Vault-native compatible.** Writes `.md` with frontmatter: `type`, `created`, `attendees`, `tags`, `source_app`.
@@ -63,7 +65,7 @@ speak → capture → md transcription → knowledge base
 ## Privacy
 
 - All transcription models run entirely on-device. No audio is ever sent anywhere.
-- AI summaries are generated on-device using Apple's NaturalLanguage framework. No external API. (Experimental)
+- AI summaries are generated on-device (Qwen3, Gemma 3, or Apple NL). No external API, no network.
 - No network calls. No analytics. No telemetry.
 - No audio is saved to disk. Only text transcripts.
 - The app window is hidden from screen sharing by default.
@@ -74,14 +76,15 @@ speak → capture → md transcription → knowledge base
 - **Apple Silicon only.** Parakeet and FluidAudio need Metal / ANE. No Intel.
 - **macOS 26+ only.**
 - **Screen Recording re-prompts monthly.** OS limitation.
-- **AI Summaries are not there yet.**
 - **Diarization is imperfect.** Works well with headset mics. Laptop speakers with crosstalk will give worse speaker separation.
 - **No live speaker labels.** Diarization runs after the session ends.
-- **Microphone input may stop working.** If no audio is captured, switching to a specific input device in Settings → Recording (instead of "System Default") usually resolves it.
+- **Microphone input may stop working.** If no audio is captured, switching to a specific input device in Settings → Recording (instead of "System Default") usually resolves it. Additonally you can triple click the App's logo to reset the recording process.
 - **Local sound input sometimes fails.** System audio capture may silently stop capturing. Changing the input device and restarting the recording session fixes it.
 - **Auto-record meetings detction only for Applications** Browser-based meetings (e.g. Google Meet in a browser) are not detected.
+- **Gemma 4  models not supoorted yet** Waiting for https://github.com/ml-explore/mlx-swift-lm/issues/177
 
 ## Output
+
 
 ```markdown
 ---
@@ -97,6 +100,7 @@ tags:
   - source/hushscribe
 ---
 
+
 # Call Recording — 2026-03-23 10:00
 
 ## Transcript
@@ -110,7 +114,13 @@ are locked, landing page is live in staging.
 ```
 
 - Voice memos use `type: fleeting` with a single speaker. Same structure, same frontmatter.
-- User can generate AI Summaries of the transcript (Experimental)
+- Open any transcript in the Transcript Viewer to generate an AI summary (Highlights + To-Dos) on-device.
+
+
+<p align="center">
+  <img src="assets/transcription.png" width="420" alt="HushScribe — transcription" />
+  <img src="assets/summary.png" width="420" alt="HushScribe — AI summary" />
+</p>
 
 ## Build
 

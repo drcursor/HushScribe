@@ -3,6 +3,26 @@ import Foundation
 import Observation
 import CoreAudio
 
+struct CustomSummaryPrompt: Codable, Equatable {
+    var name: String
+    var body: String
+    var isEmpty: Bool { name.trimmingCharacters(in: .whitespaces).isEmpty }
+}
+
+/// Identifies which system prompt to use for LLM summarisation.
+/// `.default` uses the built-in prompt; `.custom(0/1/2)` uses one of the three user-defined prompts.
+enum SummaryPromptSelection: Equatable, Hashable {
+    case `default`
+    case custom(Int)
+
+    var displayName: String {
+        switch self {
+        case .default: return "Default"
+        case .custom(let i): return "Custom \(i + 1)"
+        }
+    }
+}
+
 enum SessionType: String {
     case callCapture
     case voiceMemo
@@ -88,6 +108,33 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(transcriptionModel.rawValue, forKey: "transcriptionModel") }
     }
 
+    /// Which model to use for AI summaries. Default is the built-in NL framework.
+    var summaryModel: SummaryModel {
+        didSet { UserDefaults.standard.set(summaryModel.rawValue, forKey: "summaryModel") }
+    }
+
+    /// Temperature for LLM summary generation (0.0–1.0). Default 0.3.
+    var summaryTemperature: Double {
+        didSet { UserDefaults.standard.set(summaryTemperature, forKey: "summaryTemperature") }
+    }
+
+    /// Maximum tokens for LLM summary generation. Default 4000.
+    var summaryMaxTokens: Int {
+        didSet { UserDefaults.standard.set(summaryMaxTokens, forKey: "summaryMaxTokens") }
+    }
+
+    /// Three user-defined summary prompts (name + body). Empty slots are ignored in the UI.
+    var customSummaryPrompts: [CustomSummaryPrompt] {
+        didSet {
+            if let data = try? JSONEncoder().encode(customSummaryPrompts) {
+                UserDefaults.standard.set(data, forKey: "customSummaryPrompts")
+            }
+        }
+    }
+
+    /// Which prompt is selected for summarisation. Not persisted (resets to default on launch).
+    var selectedSummaryPrompt: SummaryPromptSelection = .default
+
     /// VAD confidence threshold for system audio (0.0–1.0). Higher = less sensitive, fewer false positives.
     var sysVadThreshold: Double {
         didSet { UserDefaults.standard.set(sysVadThreshold, forKey: "sysVadThreshold") }
@@ -127,6 +174,22 @@ final class AppSettings {
         self.silenceTimeoutSeconds = storedTimeout > 0 ? storedTimeout : 120
         let storedModel = defaults.string(forKey: "transcriptionModel") ?? ""
         self.transcriptionModel = TranscriptionModel(rawValue: storedModel) ?? .parakeet
+        let storedSummaryModel = defaults.string(forKey: "summaryModel") ?? ""
+        self.summaryModel = SummaryModel(rawValue: storedSummaryModel) ?? .appleNL
+        let storedTemp = defaults.double(forKey: "summaryTemperature")
+        self.summaryTemperature = storedTemp > 0 ? storedTemp : 0.3
+        let storedMaxTokens = defaults.integer(forKey: "summaryMaxTokens")
+        self.summaryMaxTokens = storedMaxTokens > 0 ? storedMaxTokens : 4000
+        if let data = defaults.data(forKey: "customSummaryPrompts"),
+           let decoded = try? JSONDecoder().decode([CustomSummaryPrompt].self, from: data) {
+            self.customSummaryPrompts = decoded
+        } else {
+            self.customSummaryPrompts = [
+                CustomSummaryPrompt(name: "", body: ""),
+                CustomSummaryPrompt(name: "", body: ""),
+                CustomSummaryPrompt(name: "", body: ""),
+            ]
+        }
         let storedThreshold = defaults.double(forKey: "sysVadThreshold")
         self.sysVadThreshold = storedThreshold > 0 ? storedThreshold : 0.92
         self.autoMeetingDetect = defaults.bool(forKey: "autoMeetingDetect")

@@ -70,7 +70,7 @@ struct HushScribeApp: App {
         } else if recordingState.isRecording {
             return "record.circle.fill"
         } else {
-            return "pencil"
+            return "quote.bubble"
         }
     }
 }
