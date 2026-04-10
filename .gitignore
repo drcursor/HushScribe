@@ -3,7 +3,7 @@ HushScribe/.build/
 HushScribe/.swiftpm/
 dist/
 build/
-
+.claude
 # macOS
 .DS_Store
 *.xcuserdata

@@ -57,10 +57,6 @@ struct SummaryService {
         "share", "look", "care", "need", "want", "show", "tell",
     ]
 
-    // Speaker label pattern: "**You** (12:34:56)" or "**Speaker 2** (12:34:56)"
-    private static let speakerPrefix = try? NSRegularExpression(
-        pattern: #"^\*\*[^*]+\*\*\s*\(\d+:\d+:\d+\)\s*"#
-    )
     private static let speakerHeaderRe = try? NSRegularExpression(
         pattern: #"^\*\*([^*]+)\*\*\s*\(\d+:\d+:\d+\)"#
     )
@@ -152,13 +148,6 @@ struct SummaryService {
             }
         }
         return result
-    }
-
-    private static func stripSpeakerLabel(_ sentence: String) -> String {
-        guard let re = speakerPrefix else { return sentence }
-        let ns = sentence as NSString
-        return re.stringByReplacingMatches(in: sentence, range: NSRange(location: 0, length: ns.length), withTemplate: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     // MARK: - Highlights
@@ -339,26 +328,6 @@ struct SummaryService {
         if let first = s.first { s = first.uppercased() + s.dropFirst() }
         if let last = s.last, !".!?…".contains(last) { s += "." }
 
-        return s
-    }
-
-    // MARK: - Sentence compression (used for fallback)
-
-    private static func compress(_ sentence: String) -> String {
-        var s = sentence
-        for pattern in fillerPatterns {
-            let ns = s as NSString
-            s = pattern.stringByReplacingMatches(in: s, range: NSRange(location: 0, length: ns.length), withTemplate: " ")
-        }
-        s = s.components(separatedBy: .whitespaces).filter { !$0.isEmpty }.joined(separator: " ")
-        s = s.trimmingCharacters(in: .whitespacesAndNewlines)
-        while let first = s.first, ",.;:".contains(first) {
-            s = String(s.dropFirst()).trimmingCharacters(in: .whitespaces)
-        }
-        if let first = s.first { s = first.uppercased() + s.dropFirst() }
-        let words = s.split(separator: " ", omittingEmptySubsequences: true)
-        if words.count > 20 { s = words.prefix(20).joined(separator: " ") + "…" }
-        if let last = s.last, !".!?…".contains(last) { s += "." }
         return s
     }
 
