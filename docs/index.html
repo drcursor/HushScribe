@@ -421,17 +421,15 @@
 
 <!-- Hero -->
 <div class="hero">
-  <div class="hero-badge">100% on-device · No cloud · No API keys · No subscription</div>
 
-  <h1>Your meetings.<br /><span>Your Data.</span></h1>
+  <h1>Your meetings<br /><span>Your data</span></h1>
 
   <p class="hero-sub">
-    Local meeting transcription for macOS. <br>No cloud services or API keys. Your data never leaves your computer.
+    Local-only meeting transcription for macOS. <br>No cloud services or API keys. Your data never leaves your computer.
   </p>
 
   <div class="hero-actions">
-    <a class="btn btn-primary" href="#install">Download HushScribe</a>
-    <a class="btn btn-secondary" href="https://github.com/drcursor/HushScribe">View on GitHub</a>
+    <a class="btn btn-primary" href="#install">Install HushScribe</a>
   </div>
 
   <div class="screenshots">
@@ -515,11 +513,13 @@ brew install --cask hushscribe</pre>
     </div>
   </div>
 
-  <p style="margin-top: 16px; font-size: 14px; color: var(--fg3);">
-    Prefer to install manually? Download the DMG from the
-    <a href="https://github.com/drcursor/HushScribe/releases/latest">latest release</a>
-    and drag HushScribe to <code>/Applications</code>.
-  </p>
+  <div style="margin-top: 16px; background: var(--bg1); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;">
+    <div>
+      <div style="font-size: 14px; font-weight: 600; color: var(--fg); margin-bottom: 4px;">Manual install</div>
+      <div style="font-size: 13px; color: var(--fg2);">Download the DMG, open it, and drag HushScribe to <code>/Applications</code>.</div>
+    </div>
+    <a href="https://github.com/drcursor/HushScribe/releases/latest" class="btn btn-secondary" style="white-space: nowrap; flex-shrink: 0;">Download DMG</a>
+  </div>
 </section>
 
 <hr />
