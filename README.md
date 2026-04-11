@@ -15,15 +15,15 @@
 
 ## Overview
 
-HushScribe is a macOS menu bar app that captures meetings and voice memos, transcribes them on-device, and writes structured `.md` files to a folder of your choice (eg. including your Obsidian vault).
+HushScribe is a macOS menu bar app that captures meetings and voice memos, transcribes them on-device, and writes structured `.md` files to a folder of your choice (eg. your Obsidian vault).
 
 Every step runs locally. Transcription uses on-device models (Parakeet-TDT v3, WhisperKit, or Apple Speech). AI summaries are generated on-device via Qwen3, Gemma 3, or Apple's NaturalLanguage framework. 
 
 *No audio, no transcripts, and no data of any kind is ever sent to the internet.*
 
 <p align="center">
-  <img src="assets/main.png" width="280" alt="HushScribe — main" style="vertical-align:middle"/>
-  <img src="assets/settings.png" width="280" alt="HushScribe — settings" style="vertical-align:middle" />
+  <img src="assets/main.png" height="280" alt="HushScribe — main" style="vertical-align:middle"/>
+  <img src="assets/settings.png" height="280" alt="HushScribe — settings" style="vertical-align:middle" />
 </p>
 
 ## Installing
