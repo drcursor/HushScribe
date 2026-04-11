@@ -2,6 +2,10 @@
 
 > **Fork note:** HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io). Changes merged from the upstream Tome repository are marked with `[upstream]` in this changelog.
 
+## [2.14.0] — 2026-04-11
+
+- **Fix: mid-session microphone device switch.** `MicCapture` now exposes `stopForSwitch()`, which tears down the tap and stops the engine without calling `engine.reset()`, keeping the AUHAL unit initialised. This makes `AudioUnitSetProperty` reliable during live device switches and prevents the mic stream from silently dropping when swapping input devices mid-session. Thanks to [@acrolyos](https://github.com/acrolyos) for the report ([Gremble-io/tome-app#27](https://github.com/Gremble-io/tome-app/issues/27)).
+
 ## [2.13.0] — 2026-04-10
 
 - **Legal Disclaimer onboarding step.** A new step in the first-launch wizard displays the recording consent notice. The user must tick "I understand it's my sole responsibility to comply with local recording laws" before proceeding. Recording is blocked until acknowledged.
