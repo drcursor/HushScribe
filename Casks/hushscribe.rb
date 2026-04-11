@@ -1,6 +1,6 @@
 cask "hushscribe" do
-  version "2.14.0"
-  sha256 "e238e6c97247f364f805a609c66ef8949ff6bd2bb6b1c1aed3f2240abbd06103"
+  version "3.0.0"
+  sha256 "ad32d28dca3d7bd73a02e11b9710afafa6efbc08ff662c19f203c199713af11e"
 
   url "https://github.com/drcursor/HushScribe/releases/download/v#{version}/HushScribe.dmg"
   name "HushScribe"
