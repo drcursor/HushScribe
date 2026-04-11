@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# Extracts the changelog body for a given version from CHANGELOG.md.
+# Usage: changelog_for_version "2.14.0"
+changelog_for_version() {
+    local version="$1"
+    local changelog="$ROOT_DIR/CHANGELOG.md"
+    # Match the header for the requested version, collect lines until the next
+    # version header, then trim leading/trailing blank lines.
+    awk "/^## \[$version\]/{found=1; next} found && /^## \[/{exit} found{print}" "$changelog" \
+        | awk 'NF{found=1} found{print}'
+}
+
 # --- 1. Configuration ---
 APP_NAME="HushScribe"
 IDENTIFIER="com.drcursor.hushscribe"
@@ -119,10 +130,15 @@ fi
 
 
 echo "--- Step 6: GH release ---"
+RELEASE_NOTES=$(changelog_for_version "$VERSION")
+if [[ -z "$RELEASE_NOTES" ]]; then
+    echo "Warning: no changelog entry found for $VERSION — using generic notes."
+    RELEASE_NOTES="Release v$VERSION"
+fi
 gh release create v$VERSION \
     dist/HushScribe.dmg \
     --title "HushScribe v$VERSION" \
-    --notes "Release v$VERSION"
+    --notes "$RELEASE_NOTES"
 echo "Created GH release"
 
 
