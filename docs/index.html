@@ -1,564 +1,838 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HushScribe — Local Meeting Transcription for macOS</title>
-  <meta name="description" content=HLocal meeting transcription for macOS. No cloud services or API keys. Your data never leaves your computer." />
-  <link rel="icon" type="image/svg+xml" href="logo.svg" />
+  <meta name="description" content="Local-only meeting transcription for macOS. No cloud, no API keys. Your data never leaves your Mac." />
+  <link rel="icon" href="favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── Themes ── */
-    :root[data-theme="dark"] {
-      --bg:      #0e0e0f;
-      --bg1:     #141416;
-      --bg2:     #1c1c1f;
-      --border:  #2a2a2e;
-      --fg:      #f0f0f2;
-      --fg2:     #a0a0a8;
-      --fg3:     #606068;
-      --shadow:  rgba(0,0,0,0.5);
-      --nav-bg:  rgba(14,14,15,0.85);
-    }
-
-    :root[data-theme="light"] {
-      --bg:      #f5f5f7;
-      --bg1:     #ffffff;
-      --bg2:     #ebebed;
-      --border:  #d0d0d5;
-      --fg:      #1d1d1f;
-      --fg2:     #6e6e73;
-      --fg3:     #aeaeb2;
-      --shadow:  rgba(0,0,0,0.12);
-      --nav-bg:  rgba(245,245,247,0.85);
-    }
-
     :root {
-      --accent:  #e8734a;
-      --green:   #28a760;
-      --radius:  12px;
-      --font:    -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      --bg:       #f8f7f4;
+      --bg1:      #efede8;
+      --ink:      #171512;
+      --ink2:     #6b6760;
+      --ink3:     #b5b2ac;
+      --accent:   #c84f1b;
+      --dark:     #131210;
+      --dark2:    #1e1c19;
+      --dark3:    #2c2a26;
+      --dark-ink: #e8e6e1;
+      --dark-ink2:#c2beb8;
+      --font:     'Geist', -apple-system, sans-serif;
+      --mono:     'Geist Mono', 'SF Mono', monospace;
+      --ease:     cubic-bezier(0.16, 1, 0.3, 1);
+      --spring:   cubic-bezier(0.32, 0.72, 0, 1);
     }
 
     html { scroll-behavior: smooth; }
-
     body {
       background: var(--bg);
-      color: var(--fg);
+      color: var(--ink);
       font-family: var(--font);
-      font-size: 16px;
-      line-height: 1.6;
       -webkit-font-smoothing: antialiased;
-      transition: background 0.2s, color 0.2s;
+      overflow-x: hidden;
     }
+    a { text-decoration: none; color: inherit; }
+    img { display: block; }
 
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    code {
-      font-family: "SF Mono", "Fira Code", monospace;
-      font-size: 0.85em;
-      background: var(--bg2);
-      padding: 2px 6px;
-      border-radius: 4px;
-      color: var(--fg2);
-    }
-
-    /* ── Nav ── */
+    /* ─────────────────────────────────────────
+       NAV — floating pill
+    ───────────────────────────────────────── */
     nav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+      width: max-content;
+      max-width: calc(100vw - 24px);
+    }
+    .nav-inner {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 0 40px;
-      height: 56px;
-      background: var(--nav-bg);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      transition: background 0.2s, border-color 0.2s;
+      gap: 4px;
+      background: rgba(248,247,244,0.88);
+      border: 1px solid rgba(0,0,0,0.10);
+      border-radius: 999px;
+      padding: 5px 5px 5px 16px;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8);
     }
-
-    .nav-left {
-      display: flex;
-      align-items: center;
-      gap: 28px;
-    }
-
     .nav-logo {
       display: flex;
       align-items: center;
-      gap: 9px;
+      gap: 7px;
+      font-size: 14px;
       font-weight: 600;
-      font-size: 15px;
-      color: var(--fg);
-      text-decoration: none;
+      color: var(--ink);
+      white-space: nowrap;
     }
-
-    .nav-logo img {
-      width: 26px;
-      height: 26px;
-      border-radius: 7px;
-    }
-
-    .nav-links {
-      display: flex;
-      gap: 24px;
-      list-style: none;
-    }
-
+    .nav-logo img { width: 20px; height: 20px; }
+    .nav-sep { width: 1px; height: 16px; background: rgba(0,0,0,0.1); margin: 0 6px; flex-shrink: 0; }
+    .nav-links { display: flex; gap: 0; list-style: none; }
     .nav-links a {
-      color: var(--fg2);
-      font-size: 14px;
-      transition: color 0.15s;
+      display: block; padding: 6px 11px;
+      border-radius: 999px; font-size: 13px; color: var(--ink2);
+      transition: color 0.2s var(--ease), background 0.2s var(--ease);
+      white-space: nowrap;
     }
-
-    .nav-links a:hover { color: var(--fg); text-decoration: none; }
-
-    /* ── Theme toggle ── */
-    .theme-toggle {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      width: 34px;
-      height: 34px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
-      font-size: 15px;
-      line-height: 1;
-      flex-shrink: 0;
+    .nav-links a:hover { color: var(--ink); background: var(--bg1); }
+    .nav-pill {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--ink); color: var(--bg);
+      font-size: 13px; font-weight: 500;
+      padding: 8px 16px; border-radius: 999px;
+      transition: transform 0.35s var(--spring), opacity 0.2s;
+      white-space: nowrap;
     }
-
-    .theme-toggle:hover { background: var(--border); }
-
-    /* ── Hero ── */
-    .hero {
-      text-align: center;
-      padding: 100px 24px 80px;
-      max-width: 760px;
-      margin: 0 auto;
-    }
-
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(40,167,96,0.12);
-      border: 1px solid rgba(40,167,96,0.28);
-      color: var(--green);
-      font-size: 12px;
-      font-weight: 500;
-      padding: 4px 12px;
-      border-radius: 100px;
-      margin-bottom: 28px;
-      letter-spacing: 0.02em;
-    }
-
-    .hero-badge::before {
-      content: '';
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--green);
-    }
-
-    h1 {
-      font-size: clamp(36px, 6vw, 58px);
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-      margin-bottom: 20px;
-    }
-
-    h1 span { color: var(--accent); }
-
-    .hero-sub {
-      font-size: 18px;
-      color: var(--fg2);
-      max-width: 520px;
-      margin: 0 auto 40px;
-      line-height: 1.65;
-    }
-
-    .hero-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-bottom: 64px;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 24px;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 500;
-      transition: opacity 0.15s, transform 0.15s;
-      cursor: pointer;
-    }
-
-    .btn:hover { opacity: 0.88; transform: translateY(-1px); text-decoration: none; }
-
-    .btn-primary { background: var(--accent); color: #fff; }
-
-    .btn-secondary {
-      background: var(--bg2);
-      color: var(--fg);
-      border: 1px solid var(--border);
-    }
-
-    /* ── Screenshots ── */
-    .screenshots {
-      display: flex;
-      gap: 16px;
-      justify-content: center;
-      flex-wrap: wrap;
-      align-items: flex-start;
-    }
-
-    .screenshots img {
-      width: 240px;
-      height: auto;
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      box-shadow: 0 24px 64px var(--shadow);
-    }
-
-    /* ── Sections ── */
-    section {
-      padding: 80px 24px;
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-
-    .section-label {
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 12px;
-    }
-
-    h2 {
-      font-size: clamp(24px, 4vw, 36px);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 16px;
-    }
-
-    .section-sub {
-      font-size: 16px;
-      color: var(--fg2);
-      max-width: 560px;
-      margin-bottom: 48px;
-    }
-
-    /* ── Bullet lists (privacy + features) ── */
-    .bullet-list {
-      columns: 2;
-      column-gap: 40px;
-      list-style: none;
-    }
-
-    .bullet-list li {
-      break-inside: avoid;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      gap: 12px;
-      align-items: baseline;
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    .bullet-list li .bi {
-      flex-shrink: 0;
-      font-size: 15px;
-      width: 20px;
-      text-align: center;
-    }
-
-    .bullet-list li strong {
-      display: block;
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 2px;
-      color: var(--fg);
-    }
-
-    .bullet-list li span {
-      color: var(--fg2);
-    }
+    .nav-pill:hover { opacity: 0.8; transform: scale(1.04); }
 
     @media (max-width: 640px) {
-      .bullet-list { columns: 1; }
+      .nav-links, .nav-sep { display: none; }
+      .nav-inner { padding: 5px 5px 5px 14px; gap: 8px; }
     }
 
-    /* ── Output ── */
-    .output-wrap {
+    /* ─────────────────────────────────────────
+       HERO — left-aligned split screen
+    ───────────────────────────────────────── */
+    .hero {
+      min-height: 100dvh;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      align-items: start;
-      margin-bottom: 32px;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 120px 48px 80px;
+      gap: 60px;
+    }
+    .hero-left { display: flex; flex-direction: column; align-items: flex-start; }
+    .hero-logo { width: clamp(48px, 6vw, 68px); height: clamp(48px, 6vw, 68px); margin-bottom: 28px; }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: 20px;
+    }
+    .hero-eyebrow span {
+      display: inline-block; width: 5px; height: 5px;
+      border-radius: 50%; background: var(--accent);
+      animation: blink 2s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.3;transform:scale(0.6)} }
+    h1 {
+      font-size: clamp(40px, 5.5vw, 72px);
+      font-weight: 700;
+      letter-spacing: -0.045em;
+      line-height: 1.04;
+      margin-bottom: 20px;
+      color: var(--ink);
+    }
+    h1 .accent { color: var(--accent); }
+    .hero-sub {
+      font-size: 16px; color: var(--ink2); line-height: 1.75;
+      max-width: 400px; margin-bottom: 36px;
+    }
+    .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .btn-dark {
+      display: inline-flex; align-items: center; gap: 9px;
+      background: var(--ink); color: var(--bg);
+      font-size: 14px; font-weight: 500; font-family: var(--font);
+      padding: 12px 18px 12px 22px; border-radius: 999px; border: none; cursor: pointer;
+      transition: transform 0.35s var(--spring), opacity 0.2s;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    }
+    .btn-dark:hover { opacity: 0.82; transform: scale(1.04); }
+    .btn-dark:active { transform: scale(0.97); }
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: transparent; color: var(--ink2);
+      font-size: 14px; font-family: var(--font);
+      padding: 12px 18px; border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.12);
+      transition: color 0.2s var(--ease), background 0.2s var(--ease);
+      cursor: pointer;
+    }
+    .btn-ghost:hover { color: var(--ink); background: var(--bg1); }
+    .btn-icon {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: rgba(255,255,255,0.16);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; flex-shrink: 0;
+      transition: transform 0.3s var(--spring);
+    }
+    .btn-ghost .btn-icon { background: rgba(0,0,0,0.07); }
+    .btn-dark:hover .btn-icon,
+    .btn-ghost:hover .btn-icon { transform: translate(2px, -1px) scale(1.1); }
+
+    .hero-right { position: relative; }
+    .hero-screenshot {
+      background: rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.10);
+      border-radius: 20px;
+      padding: 8px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.16), 0 8px 24px rgba(0,0,0,0.08);
+      transform: perspective(1000px) rotateY(-3deg) rotateX(1deg);
+      transition: transform 0.6s var(--ease);
+    }
+    .hero-screenshot:hover { transform: perspective(1000px) rotateY(0deg) rotateX(0deg); }
+    .hero-screenshot img { width: 100%; border-radius: 14px; }
+    .hero-screenshot-sm {
+      position: absolute;
+      bottom: -28px;
+      right: -28px;
+      width: 42%;
+      background: rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.10);
+      border-radius: 16px;
+      padding: 6px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.14);
+    }
+    .hero-screenshot-sm img { width: 100%; border-radius: 11px; }
+
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: 1fr;
+        padding: 110px 24px 60px;
+        gap: 48px;
+      }
+      h1 { font-size: clamp(38px, 8vw, 58px); }
+      .hero-screenshot { transform: none; }
+      .hero-screenshot-sm { display: none; }
+    }
+    @media (max-width: 540px) {
+      .hero { padding: 100px 20px 56px; }
+      .hero-sub { max-width: 100%; }
     }
 
-    @media (max-width: 680px) { .output-wrap { grid-template-columns: 1fr; } }
-
-    .output-wrap img {
-      width: 100%;
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-    }
-
-    /* ── Code block ── */
-    pre {
-      background: var(--bg1);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px 24px;
-      font-family: "SF Mono", "Fira Code", monospace;
-      font-size: 13px;
-      color: var(--fg);
-      overflow-x: auto;
-      line-height: 1.7;
-      transition: background 0.2s, border-color 0.2s;
-    }
-
-    /* ── Install ── */
-    .install-block {
-      background: var(--bg1);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+    /* ─────────────────────────────────────────
+       MARQUEE
+    ───────────────────────────────────────── */
+    .marquee-strip {
+      background: var(--dark);
+      padding: 13px 0;
       overflow: hidden;
-      transition: background 0.2s, border-color 0.2s;
+      white-space: nowrap;
+      user-select: none;
+    }
+    .marquee-track {
+      display: inline-flex;
+      animation: marquee 28s linear infinite;
+    }
+    .marquee-track span {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--dark-ink2);
+      padding: 0 32px;
+    }
+    .marquee-track span b { color: var(--dark-ink); font-weight: 600; }
+    @keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+
+    /* ─────────────────────────────────────────
+       STAT STRIP
+    ───────────────────────────────────────── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-top: 1px solid rgba(0,0,0,0.08);
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .stat {
+      padding: 48px 32px;
+      border-right: 1px solid rgba(0,0,0,0.08);
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .stat:last-child { border-right: none; }
+    .stat-num {
+      font-family: var(--mono);
+      font-size: clamp(48px, 6vw, 72px);
+      font-weight: 600;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      color: var(--ink);
+    }
+    .stat-label { font-size: 13px; color: var(--ink2); }
+
+    @media (max-width: 760px) {
+      .stats { grid-template-columns: 1fr 1fr; }
+      .stat:nth-child(2) { border-right: none; }
+      .stat { padding: 32px 24px; }
+    }
+    @media (max-width: 420px) {
+      .stats { grid-template-columns: 1fr 1fr; }
+      .stat { padding: 28px 20px; }
     }
 
+    /* ─────────────────────────────────────────
+       SECTION SHARED
+    ───────────────────────────────────────── */
+    .section { max-width: 1200px; margin: 0 auto; padding: 100px 48px; }
+    @media (max-width: 900px) { .section { padding: 80px 24px; } }
+    @media (max-width: 540px) { .section { padding: 64px 20px; } }
+
+    .eyebrow {
+      display: inline-block;
+      font-size: 25px; font-weight: 600;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 14px;
+    }
+    h2 {
+      font-size: clamp(30px, 4vw, 52px);
+      font-weight: 700; letter-spacing: -0.04em; line-height: 1.07;
+    }
+    .section-sub {
+      font-size: 16px; color: var(--ink2);
+      line-height: 1.75; max-width: 600px; margin-top: 14px;
+    }
+
+    /* ─────────────────────────────────────────
+       PRIVACY — dark section, icon list
+    ───────────────────────────────────────── */
+    .privacy-section {
+      background: var(--dark);
+      padding: 100px 0;
+    }
+    .privacy-inner {
+      max-width: 1200px; margin: 0 auto; padding: 0 48px;
+    }
+    @media (max-width: 900px) { .privacy-inner { padding: 0 24px; } }
+    @media (max-width: 540px) { .privacy-inner { padding: 0 20px; } }
+
+    .privacy-header { margin-bottom: 72px; }
+    .privacy-header .eyebrow { color: rgba(200,79,27,0.9); }
+    .privacy-header h2 { color: var(--dark-ink); }
+    .privacy-header .section-sub { color: var(--dark-ink2); }
+
+    .privacy-list { list-style: none; }
+    .privacy-item {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 0 28px;
+      align-items: start;
+      padding: 28px 0;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .privacy-item:last-child { border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .privacy-icon {
+      width: 22px; height: 22px;
+      color: var(--accent);
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+    .privacy-content { display: flex; gap: 40px; align-items: baseline; }
+    .privacy-title {
+      font-size: 16px; font-weight: 600;
+      color: var(--dark-ink); min-width: 220px; flex-shrink: 0;
+    }
+    .privacy-desc { font-size: 14px; color: var(--dark-ink2); line-height: 1.75; }
+    code {
+      font-family: var(--mono); font-size: 0.82em;
+      background: rgba(255,255,255,0.1);
+      padding: 1px 5px; border-radius: 4px;
+      color: rgba(0, 0, 0, 0.844);
+    }
+
+    @media (max-width: 760px) {
+      .privacy-item { grid-template-columns: 30px 1fr; gap: 0 16px; padding: 22px 0; }
+      .privacy-content { flex-direction: column; gap: 5px; }
+      .privacy-title { min-width: unset; font-size: 15px; }
+      .privacy-desc { font-size: 13px; }
+    }
+
+    /* ─────────────────────────────────────────
+       FEATURES — editorial icon list
+    ───────────────────────────────────────── */
+    .features-list { list-style: none; margin-top: 64px; }
+    .feat-item {
+      display: grid;
+      grid-template-columns: 36px 240px 1fr auto;
+      gap: 0 32px;
+      align-items: center;
+      padding: 22px 0;
+      border-top: 1px solid rgba(0,0,0,0.08);
+    }
+    .feat-item:last-child { border-bottom: 1px solid rgba(0,0,0,0.08); }
+    .feat-icon {
+      width: 22px; height: 22px;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .feat-title { font-size: 15px; font-weight: 600; color: var(--ink); }
+    .feat-desc { font-size: 13px; color: var(--ink2); line-height: 1.65; }
+    .feat-tag {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--ink2);
+      white-space: nowrap;
+    }
+
+    @media (max-width: 900px) {
+      .feat-item { grid-template-columns: 30px 1fr; gap: 0 16px; padding: 18px 0; }
+      .feat-desc, .feat-tag { display: none; }
+    }
+    @media (max-width: 540px) {
+      .feat-item { grid-template-columns: 26px 1fr; gap: 0 12px; }
+    }
+
+    /* ─────────────────────────────────────────
+       OUTPUT
+    ───────────────────────────────────────── */
+    .output-formats {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; margin-bottom: 52px;
+    }
+    .fmt-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--bg1); border: 1px solid rgba(0,0,0,0.10);
+      border-radius: 999px; padding: 5px 14px;
+      font-family: var(--mono); font-size: 12px; color: var(--ink2);
+    }
+    .fmt-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+    .output-main { margin-bottom: 14px; }
+    .output-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+    @media (max-width: 680px) {
+      .output-row { grid-template-columns: 1fr; }
+    }
+
+    .out-label {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--ink3); margin-bottom: 10px;
+    }
+
+    .frame {
+      background: rgba(0,0,0,0.04);
+      border: 1px solid rgba(0,0,0,0.09);
+      border-radius: 18px; padding: 7px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.10);
+      transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease);
+    }
+    .frame:hover { transform: translateY(-3px); box-shadow: 0 24px 56px rgba(0,0,0,0.13); }
+    .frame img { width: 100%; border-radius: 12px; display: block; }
+
+    .output-code-wrap {
+      background: rgba(0,0,0,0.04);
+      border: 1px solid rgba(0,0,0,0.09);
+      border-radius: 18px; padding: 7px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.10);
+      height: 100%;
+    }
+    .output-code-inner {
+      background: var(--ink);
+      border-radius: 12px;
+      padding: 22px 24px;
+      height: 100%;
+    }
+    .output-code-inner pre {
+      background: none; border: none;
+      padding: 0; margin: 0;
+      font-family: var(--mono); font-size: 12px;
+      line-height: 1.9; overflow-x: auto;
+    }
+    .oc-dim   { color: rgba(255,255,255,0.28); }
+    .oc-key   { color: rgba(255,255,255,0.48); }
+    .oc-val   { color: #e8e6e1; }
+    .oc-head  { color: var(--accent); font-weight: 600; }
+    .oc-body  { color: rgba(255,255,255,0.72); }
+    .oc-ts    { color: rgba(255,255,255,0.36); }
+    .oc-name  { color: var(--accent); }
+
+    /* ─────────────────────────────────────────
+       INSTALL
+    ───────────────────────────────────────── */
+    .install-wrap { margin-top: 56px; display: flex; flex-direction: column; gap: 12px; }
+    .install-block {
+      background: rgba(0,0,0,0.03);
+      border: 1px solid rgba(0,0,0,0.09);
+      border-radius: 20px; padding: 2px;
+    }
+    .install-inner {
+      background: var(--bg);
+      border-radius: 19px; overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+    }
     .install-tab {
-      display: flex;
-      border-bottom: 1px solid var(--border);
-      padding: 0 4px;
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+      padding: 0 24px; display: flex;
     }
-
-    .install-tab span {
-      padding: 12px 16px;
-      font-size: 13px;
-      color: var(--fg2);
-      border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
+    .tab-label {
+      padding: 13px 4px 11px; font-size: 13px; color: var(--ink2);
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
     }
-
-    .install-tab span.active {
-      color: var(--fg);
-      border-bottom-color: var(--accent);
-    }
-
+    .tab-label.active { color: var(--ink); border-bottom-color: var(--accent); }
     .install-body { padding: 24px; }
-
-    .install-body pre {
-      background: var(--bg2);
-      border-radius: 8px;
-      border-color: var(--border);
+    pre {
+      background: var(--bg1); border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 12px; padding: 16px 20px;
+      font-family: var(--mono); font-size: 13px; color: var(--ink);
+      overflow-x: auto; line-height: 1.8;
     }
+    .install-note { font-size: 12px; color: var(--ink2); margin-top: 12px; line-height: 1.7; }
 
-    .install-note {
-      font-size: 13px;
-      color: var(--fg3);
-      margin-top: 16px;
-      line-height: 1.7;
+    .manual-row {
+      background: rgba(0,0,0,0.03);
+      border: 1px solid rgba(0,0,0,0.09);
+      border-radius: 16px; padding: 18px 24px;
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 16px; flex-wrap: wrap;
     }
+    .manual-label { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+    .manual-sub { font-size: 13px; color: var(--ink2); }
 
-    .install-note a { color: var(--fg2); }
-
-    /* ── Divider ── */
-    hr { border: none; border-top: 1px solid var(--border); margin: 0 24px; }
-
-    /* ── Footer ── */
+    /* ─────────────────────────────────────────
+       LEGAL + FOOTER
+    ───────────────────────────────────────── */
+    .legal {
+      max-width: 1200px; margin: 0 auto;
+      padding: 0 48px 40px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+      margin-top: -1px;
+    }
+    @media (max-width: 900px) { .legal { padding: 0 24px 36px; } }
+    .legal p {
+      font-size: 11px; color: var(--ink3); line-height: 1.9;
+      padding-top: 22px;
+    }
+    .legal strong { color: var(--ink2); }
     footer {
-      text-align: center;
-      padding: 40px 24px;
-      font-size: 13px;
-      color: var(--fg3);
+      border-top: 1px solid rgba(0,0,0,0.08);
+      max-width: 1200px; margin: 0 auto;
+      padding: 28px 48px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap;
     }
-
-    footer a { color: var(--fg3); }
-    footer a:hover { color: var(--fg2); }
-
-    /* ── Responsive ── */
-    @media (max-width: 600px) {
-      nav { padding: 0 20px; }
-      .nav-links { display: none; }
-      .screenshots img { width: 100%; max-width: 320px; }
+    @media (max-width: 900px) { footer { padding: 24px; } }
+    .footer-left {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: var(--ink3);
     }
+    .footer-left img { width: 18px; height: 18px; opacity: 0.5; }
+    footer a { font-size: 13px; color: var(--ink3); }
+    footer a:hover { color: var(--ink2); }
+
+    /* ─────────────────────────────────────────
+       GITHUB SVG
+    ───────────────────────────────────────── */
+    .gh { width: 15px; height: 15px; vertical-align: middle; flex-shrink: 0; }
+
+    /* ─────────────────────────────────────────
+       SCROLL REVEAL
+    ───────────────────────────────────────── */
+    .r {
+      opacity: 0; transform: translateY(20px); filter: blur(3px);
+      transition: opacity 0.7s var(--ease), transform 0.7s var(--ease), filter 0.7s var(--ease);
+    }
+    .r.in { opacity: 1; transform: none; filter: blur(0); }
+    .d1 { transition-delay: 0.07s; }
+    .d2 { transition-delay: 0.14s; }
+    .d3 { transition-delay: 0.21s; }
+    .d4 { transition-delay: 0.28s; }
+    .d5 { transition-delay: 0.35s; }
+    .d6 { transition-delay: 0.42s; }
+    .d7 { transition-delay: 0.49s; }
+    .d8 { transition-delay: 0.56s; }
+    .d9 { transition-delay: 0.63s; }
+    .d10 { transition-delay: 0.70s; }
+    .d11 { transition-delay: 0.77s; }
   </style>
 </head>
 <body>
 
-<nav>
-  <div class="nav-left">
+<!-- NAV -->
+<nav aria-label="Main navigation">
+  <div class="nav-inner">
     <a class="nav-logo" href="#">
-      <img src="logo.svg" alt="HushScribe logo" />
+      <img src="logo.svg" alt="HushScribe" />
       HushScribe
     </a>
+    <div class="nav-sep"></div>
     <ul class="nav-links">
       <li><a href="#privacy">Privacy</a></li>
       <li><a href="#features">Features</a></li>
       <li><a href="#output">Output</a></li>
       <li><a href="#install">Install</a></li>
-      <li><a href="https://github.com/drcursor/HushScribe">GitHub</a></li>
+      <li><a href="https://github.com/drcursor/HushScribe" target="_blank" rel="noopener">
+        <svg class="gh" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+        GitHub
+      </a></li>
     </ul>
+    <a class="nav-pill" href="#install">Install free</a>
   </div>
-  <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="Toggle light/dark mode">🌙</button>
 </nav>
 
-<!-- Hero -->
-<div class="hero">
-
-  <h1>Your meetings<br /><span>Your data</span></h1>
-
-  <p class="hero-sub">
-    Local-only meeting transcription for macOS. <br>No cloud services or API keys. Your data never leaves your computer.
-  </p>
-
-  <div class="hero-actions">
-    <a class="btn btn-primary" href="#install">Install HushScribe</a>
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <img src="logo.svg" alt="HushScribe" class="hero-logo r" />
+    <div class="hero-eyebrow r d1">
+      <span></span>
+      Runs entirely on-device
+    </div>
+    <h1 class="r d2">
+      Your meetings.<br />
+      <span class="accent">Your data.</span>
+    </h1>
+    <p class="hero-sub r d3">
+      Keep a local processed transcription of your meetings. 
+    </p>
+    <p class="hero-sub r d3">No cloud, no API keys, no accounts.<br />
+      Your voice never leaves your Mac.
+    </p>
+    <div class="hero-actions r d4">
+      <a href="#install" class="btn-dark">
+        Install HushScribe
+        <span class="btn-icon">↓</span>
+      </a>
+      <a href="https://github.com/drcursor/HushScribe" class="btn-ghost" target="_blank" rel="noopener">
+        <svg class="gh" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+        View source
+      </a>
+    </div>
   </div>
+  <div class="hero-right r d3">
+    <div class="hero-screenshot">
+      <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/main.png" alt="HushScribe transcription" />
+    </div>
+    <div class="hero-screenshot-sm">
+      <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/settings.png" alt="HushScribe settings" />
+    </div>
+  </div>
+</section>
 
-  <div class="screenshots">
-    <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/main.png" alt="HushScribe main window" />
-    <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/settings.png" alt="HushScribe settings" />
+<!-- PRIVACY -->
+<div class="privacy-section" id="privacy">
+  <div class="privacy-inner">
+    <div class="privacy-header r">
+      <div class="eyebrow">Privacy first</div>
+      <h2 style="color:var(--dark-ink);">Nothing leaves your Mac.</h2>
+      <p class="section-sub" style="color:var(--dark-ink2);">By design, not by policy. Every component runs locally. There are no servers to breach, no accounts to leak.</p>
+    </div>
+    <ul class="privacy-list">
+      <li class="privacy-item r d1">
+        <svg class="privacy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        <div class="privacy-content">
+          <span class="privacy-title">Audio never touches a server</span>
+          <span class="privacy-desc">Transcription runs on-device via Apple Silicon's Neural Engine. Your voice stays on your computer, always — not in transit, not cached remotely.</span>
+        </div>
+      </li>
+      <li class="privacy-item r d2">
+        <svg class="privacy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+        <div class="privacy-content">
+          <span class="privacy-title">AI that stays local</span>
+          <span class="privacy-desc">Summaries use Qwen3, Gemma 3, or Apple's NaturalLanguage framework — all running on-device. No API key, no external request, no account.</span>
+        </div>
+      </li>
+      <li class="privacy-item r d3">
+        <svg class="privacy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <div class="privacy-content">
+          <span class="privacy-title">You own the output</span>
+          <span class="privacy-desc">Transcripts are plain <code>.md</code> files in a folder you choose. No proprietary format, no sync service, no vendor lock-in.</span>
+        </div>
+      </li>
+      <li class="privacy-item r d4">
+        <svg class="privacy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+        <div class="privacy-content">
+          <span class="privacy-title">Zero telemetry</span>
+          <span class="privacy-desc">No analytics, no crash reporting, no usage tracking. The app makes zero network requests while running. Verified open source.</span>
+        </div>
+      </li>
+      <li class="privacy-item r d5">
+        <svg class="privacy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        <div class="privacy-content">
+          <span class="privacy-title">Hidden from screen sharing</span>
+          <span class="privacy-desc">The app window is invisible to screen recording by default. It won't appear on your call, in screenshots, or in recordings taken by others.</span>
+        </div>
+      </li>
+      <li class="privacy-item r d6">
+        <svg class="privacy-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+        <div class="privacy-content">
+          <span class="privacy-title">Open source</span>
+          <span class="privacy-desc">Every line is on GitHub. Audit the code, build it yourself, or fork it. No black boxes — privacy claims are verifiable, not a marketing promise.</span>
+        </div>
+      </li>
+    </ul>
   </div>
 </div>
 
-<hr />
+<!-- FEATURES -->
+<section class="section" id="features">
+  <div class="r">
+    <div class="eyebrow">Features</div>
+    <p class="section-sub">Built for people who want clean, structured meeting notes without giving up control of their data.</p>
+  </div>
+  <ul class="features-list">
+    <li class="feat-item r d1">
+      <svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+      <span class="feat-title">Multilingual transcription</span>
+      <span class="feat-desc">Parakeet-TDT v3 — 25 European languages, auto-detected, runs on Apple Silicon's Neural Engine. Fastest transcription option.</span>
+    </li>
+    <li class="feat-item r d2">
+      <svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      <span class="feat-title">Multiple transcription models</span>      <span class="feat-desc">Parakeet (default), WhisperKit Base, WhisperKit Large v3, or Apple Speech. Switch at any time. All on-device.</span>
 
-<!-- Privacy -->
-<section id="privacy">
-  <div class="section-label">Privacy first</div>
-  <h2>Nothing leaves your Mac.</h2>
-  <p class="section-sub">Every part of HushScribe runs locally. There are no accounts, no servers, and no data collection. By design.</p>
-
-  <ul class="bullet-list">
-    <li><span class="bi">🎙️</span><div><strong>Audio never touches a server</strong><span>Transcription runs on-device via Apple Silicon. Your voice stays on your computer, always.</span></div></li>
-    <li><span class="bi">🤖</span><div><strong>AI that stays local</strong><span>Summaries run on-device via Qwen3, Gemma 3, or Apple's NaturalLanguage framework — no external API, no API key, no network call.</span></div></li>
-    <li><span class="bi">📁</span><div><strong>You own the output</strong><span>Transcripts are plain <code>.md</code> files in a folder you choose. No proprietary format, no lock-in.</span></div></li>
-    <li><span class="bi">🚫</span><div><strong>No telemetry</strong><span>No analytics, no crash reporting, no usage tracking. Zero network requests at runtime.</span></div></li>
-    <li><span class="bi">🖥️</span><div><strong>Hidden from screen sharing</strong><span>The app window is invisible to screen recording by default — it won't appear on your call.</span></div></li>
-    <li><span class="bi">🔓</span><div><strong>Open source</strong><span>Full source on GitHub. Read every line, build it yourself, or contribute. No black boxes.</span></div></li>
+    </li>
+    <li class="feat-item r d3">
+      <svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.7 13.8a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.61 3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.6a16 16 0 0 0 6 6l.94-.94a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 17z"/></svg>
+      <span class="feat-title">Call Capture</span>
+      <span class="feat-desc">Captures mic and system audio simultaneously. Detects Teams, Zoom, Slack and filters audio to just that source.</span>
+    </li>
+    <li class="feat-item r d4">
+      <svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <span class="feat-title">On-device AI summary</span>
+      <span class="feat-desc">Open any transcript and click Generate Summary. Qwen3, Gemma 3, or Apple NL — all local, no API key. Supports custom prompts.</span>
+    </li>
+    <li class="feat-item r d5">
+      <svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="feat-title">Speaker diarization</span>
+      <span class="feat-desc">Splits remote audio into labelled speakers after the session ends. Assign real names before saving to your vault.</span>
+    </li>
+    <li class="feat-item r d6">
+      <svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span class="feat-title">Auto-record meetings</span>
+      <span class="feat-desc">Detects active calls via app presence and mic activity. Starts and stops recording automatically — no button to forget.</span>
+    </li>
+    <li class="feat-item r d7">
+      <svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span class="feat-title">Vault-native output</span>
+      <span class="feat-desc">Structured <code>.md</code> with YAML frontmatter. Drop it directly into Obsidian or any folder-based workflow.</span>
+    </li>
+    <li class="feat-item r d8">
+      <svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span class="feat-title">Export transcripts</span>
+      <span class="feat-desc">Export any session as <code>.srt</code> subtitles or structured <code>.json</code> directly from the Transcript Viewer.</span>
+    </li>
+    <li class="feat-item r d9">
+      <svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+      <span class="feat-title">Lives in the menu bar</span>
+      <span class="feat-desc">No dock icon. Runs quietly in the background, accessible from the status bar at any time.</span>
+    </li>
+    <li class="feat-item r d10">
+      <svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      <span class="feat-title">Self-contained</span>
+      <span class="feat-desc">No Ollama, no local server, no background daemons. Everything runs inside the app — just download and go.</span>
+    </li>
+    <li class="feat-item r d11">
+      <svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+      <span class="feat-title">Voice Memo mode</span>
+      <span class="feat-desc">Mic-only recording saved to a separate folder. Voice notes never mix with meeting transcripts.</span>
+    </li>
   </ul>
 </section>
 
-<hr />
-
-<!-- Features -->
-<section id="features">
-  <div class="section-label">Features</div>
-  <p class="section-sub">Built for people who want clean, structured meeting notes without giving up control of their data.</p>
-
-  <ul class="bullet-list">
-    <li><span class="bi">🌍</span><div><strong>Multilingual transcription</strong><span>Parakeet-TDT v3 — 25 European languages, auto-detected, runs on Apple Silicon's Neural Engine.</span></div></li>
-    <li><span class="bi">🧠</span><div><strong>Multiple transcription models</strong><span>Parakeet (default), WhisperKit Base, WhisperKit Large v3, or Apple Speech. All on-device.</span></div></li>
-    <li><span class="bi">📞</span><div><strong>Call Capture</strong><span>Captures mic + system audio. Detects your conferencing app (Teams, Zoom, Slack…) and filters to just that source.</span></div></li>
-    <li><span class="bi">🎤</span><div><strong>Voice Memo mode</strong><span>Mic-only recording saved to a separate folder — voice notes never mix with meeting transcripts.</span></div></li>
-    <li><span class="bi">✨</span><div><strong>On-device AI summary</strong><span>Open any transcript and click Generate Summary. Qwen3 0.6B, Gemma 3 1B, or Apple NL — all local, no API key. Supports custom prompts.</span></div></li>
-    <li><span class="bi">👥</span><div><strong>Speaker diarization</strong><span>Splits remote audio into labelled speakers after the session. Assign real names before saving.</span></div></li>
-    <li><span class="bi">⚡</span><div><strong>Auto-record meetings</strong><span>Detects active calls via app presence + mic activity. Starts and stops automatically. Browser-based meetings not supported.</span></div></li>
-    <li><span class="bi">📋</span><div><strong>Vault-native output</strong><span>Structured <code>.md</code> with YAML frontmatter — drop it into Obsidian or any folder-based workflow.</span></div></li>
-    <li><span class="bi">🔕</span><div><strong>Lives in the menu bar</strong><span>No dock icon. Runs quietly in the background, accessible from the menu bar at any time.</span></div></li>
-    <li><span class="bi">📦</span><div><strong>Self-contained</strong><span>No Ollama, no local server, no background daemons. Everything runs inside the app — just download and go.</span></div></li>
-    <li><span class="bi">📤</span><div><strong>Export transcripts</strong><span>Export any transcript as SRT subtitles or structured JSON directly from the Transcript Viewer.</span></div></li>
-  </ul>
-</section>
-
-<hr />
-
-<!-- Output -->
-<section id="output">
-  <div class="section-label">Output</div>
-  <h2>Structured notes, ready to use.</h2>
-  <p class="section-sub">Every session produces a single <code>.md</code> file with frontmatter, a summary, and a timestamped transcript.</p>
-  <p class="section-sub">You can summarise sessions using local AI models and your own prompts, then export to <code>.srt</code> subtitles or <code>.json</code> for use in other tools.</p>
-
-  <div class="output-wrap">
-    <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/transcription.png" alt="HushScribe live transcription" />
-    <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/summary.png" alt="HushScribe AI summary" />
+<!-- OUTPUT -->
+<section class="section" id="output" style="padding-top:0;">
+  <div class="r">
+    <div class="eyebrow">Output</div>
+    <p class="section-sub">Every recording produces a structured Markdown file. Additionally you can export to other formats.</p>
+    <p class="section-sub">You can summarise the transcript or export to other formats.</p>
+    <div class="output-formats r d1">
+      <span class="fmt-pill"><span class="fmt-dot"></span>.srt — Subtitle export</span>
+      <span class="fmt-pill"><span class="fmt-dot"></span>.json — Structured transcript</span>
+    </div>
   </div>
 
-  
-<hr />
-
-<!-- Install -->
-<section id="install">
-  <div class="section-label">Install</div>
-  <h2>Up and running in seconds.</h2>
-  <p class="section-sub">Requires macOS 26+ and Apple Silicon.</p>
-  <p class="section-sub"> No account, no license, no recurring fees, no catch</p>
-  <div class="install-block">
-    <div class="install-tab">
-      <span class="active">Homebrew (recommended)</span>
+  <div class="output-row">
+    <div class="r d2">
+      <div class="out-label">On-device AI summary</div>
+      <div class="frame">
+        <img src="https://raw.githubusercontent.com/drcursor/HushScribe/main/assets/summary.png" alt="AI summary view" />
+      </div>
     </div>
-    <div class="install-body">
-      <pre>brew tap drcursor/hushscribe https://github.com/drcursor/HushScribe
+    <div class="r d3">
+      <div class="out-label">Obsidian-ready markdown file</div>
+      <div class="output-code-wrap">
+        <div class="output-code-inner">
+          <pre><span class="oc-dim">---</span>
+<span class="oc-key">date:         </span><span class="oc-val">2026-04-12</span>
+<span class="oc-key">duration:     </span><span class="oc-val">47m</span>
+<span class="oc-key">participants: </span><span class="oc-val">[You, Sarah, Marcus]</span>
+<span class="oc-key">type:         </span><span class="oc-val">call-capture</span>
+<span class="oc-dim">---</span>
+
+<span class="oc-head">## Summary</span>
+<span class="oc-body">Discussion covered Q2 roadmap priorities
+and the migration timeline for the auth
+service. Action items assigned to Marcus.</span>
+
+<span class="oc-head">## Transcript</span>
+<span class="oc-ts">[00:01] </span><span class="oc-name">You: </span><span class="oc-body">Let's start with the roadmap...</span>
+<span class="oc-ts">[00:14] </span><span class="oc-name">Sarah: </span><span class="oc-body">The auth migration is blocking us.</span>
+<span class="oc-ts">[00:31] </span><span class="oc-name">Marcus: </span><span class="oc-body">I can take that next sprint.</span>
+<span class="oc-ts">[01:04] </span><span class="oc-name">You: </span><span class="oc-body">Great — let's lock that in.</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INSTALL -->
+<section class="section" id="install" style="padding-top:0;">
+  <div class="r">
+    <div class="eyebrow">Install</div>
+    <p class="section-sub">Requires macOS 26+ and Apple Silicon. No account, no license key, no recurring fees.</p>
+  </div>
+  <div class="install-wrap">
+    <div class="install-block r d2">
+      <div class="install-inner">
+        <div class="install-tab">
+          <span class="tab-label active">Homebrew (recommended)</span>
+        </div>
+        <div class="install-body">
+          <pre>brew tap drcursor/hushscribe https://github.com/drcursor/HushScribe
 brew install --cask hushscribe</pre>
-      <p class="install-note">
-        To update: <code>brew upgrade --cask hushscribe</code>
-      </p>
+          <p class="install-note">To update: <code>brew upgrade --cask hushscribe</code></p>
+        </div>
+      </div>
     </div>
-  </div>
-
-  <div style="margin-top: 16px; background: var(--bg1); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;">
-    <div>
-      <div style="font-size: 14px; font-weight: 600; color: var(--fg); margin-bottom: 4px;">Manual install</div>
-      <div style="font-size: 13px; color: var(--fg2);">Download the DMG, open it, and drag HushScribe to <code>/Applications</code>.</div>
+    <div class="manual-row r d3">
+      <div>
+        <div class="manual-label">Manual install</div>
+        <div class="manual-sub">Download the DMG, open it, drag HushScribe to <code>/Applications</code>.</div>
+      </div>
+      <a href="https://github.com/drcursor/HushScribe/releases/latest" class="btn-ghost" target="_blank" rel="noopener" style="white-space:nowrap;flex-shrink:0;">
+        Download DMG
+      </a>
     </div>
-    <a href="https://github.com/drcursor/HushScribe/releases/latest" class="btn btn-secondary" style="white-space: nowrap; flex-shrink: 0;">Download DMG</a>
   </div>
 </section>
 
-<hr />
-
-<div style="max-width:1000px;margin:0 auto;padding:0 24px 40px;">
-  <p style="font-size:12px;color:var(--fg3);line-height:1.7;border-top:1px solid var(--border);padding-top:24px;">
-    <strong style="color:var(--fg2);">Legal notice:</strong> Laws and regulations regarding the recording and transcription of conversations vary by jurisdiction. In many places, all parties to a conversation must consent before it may be recorded. It is your sole responsibility to ensure you comply with applicable local laws before using HushScribe to record any conversation. The authors of HushScribe accept no liability for unlawful use.
+<!-- LEGAL -->
+<div class="legal r">
+  <p>
+    <strong>Legal notice:</strong> Laws regarding recording conversations vary by jurisdiction. In many places, all parties must consent before a conversation may be recorded. It is your sole responsibility to ensure compliance with applicable local laws. The authors of HushScribe accept no liability for unlawful use.
   </p>
 </div>
 
-<footer>
-  <p>
-    HushScribe &mdash; MIT License &mdash;
-    <a href="https://github.com/drcursor/HushScribe">github.com/drcursor/HushScribe</a>
-  </p>
+<!-- FOOTER -->
+<footer class="r">
+  <div class="footer-left">
+    <img src="logo.svg" alt="HushScribe" />
+    HushScribe — MIT License
+  </div>
+  <a href="https://github.com/drcursor/HushScribe" target="_blank" rel="noopener">
+    <svg class="gh" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align:middle;margin-right:5px;"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>github.com/drcursor/HushScribe
+  </a>
 </footer>
 
 <script>
-  const toggle = document.getElementById('themeToggle');
-  const root = document.documentElement;
-
-  const saved = localStorage.getItem('theme') ||
-    (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-
-  function applyTheme(theme) {
-    root.setAttribute('data-theme', theme);
-    toggle.textContent = theme === 'dark' ? '🌙' : '☀️';
-    localStorage.setItem('theme', theme);
-  }
-
-  applyTheme(saved);
-
-  toggle.addEventListener('click', () => {
-    applyTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-  });
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.06, rootMargin: '0px 0px -28px 0px' });
+  document.querySelectorAll('.r').forEach(el => io.observe(el));
 </script>
-
 </body>
 </html>
