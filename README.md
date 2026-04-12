@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.svg" width="80" alt="HushScribe logo" />
+</p>
+
 <h1 align="center">HushScribe</h1>
 
 <p align="center">

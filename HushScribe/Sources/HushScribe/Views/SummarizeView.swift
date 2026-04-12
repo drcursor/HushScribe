@@ -100,7 +100,7 @@ struct SummarizeView: View {
 
     private var toolbar: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Row 1: Generate + Browse
+            // Row 1: Generate + Export + Browse
             HStack(spacing: 10) {
                 Button {
                     generate()
@@ -116,6 +116,15 @@ struct SummarizeView: View {
                     }
                 }
                 .disabled(isGenerating || transcriptText.isEmpty)
+
+                Menu {
+                    Button("Export as SRT") { exportTranscript(format: .srt) }
+                    Button("Export as JSON") { exportTranscript(format: .json) }
+                } label: {
+                    Label("Export", systemImage: "square.and.arrow.up")
+                }
+                .disabled(parsedUtterances.isEmpty && transcriptText.isEmpty)
+                .fixedSize()
 
                 Spacer()
 
@@ -424,6 +433,87 @@ struct SummarizeView: View {
         isSaving = false
         savedFilename = summaryURL.lastPathComponent
         withAnimation { savedConfirmation = true }
+    }
+
+    // MARK: - Export
+
+    private enum ExportFormat { case srt, json }
+
+    private func exportTranscript(format: ExportFormat) {
+        let panel = NSSavePanel()
+        panel.canCreateDirectories = true
+        let baseName = transcriptURL?.deletingPathExtension().lastPathComponent ?? "transcript"
+        switch format {
+        case .srt:
+            panel.nameFieldStringValue = "\(baseName).srt"
+            panel.allowedContentTypes = [.init(filenameExtension: "srt")!]
+            panel.title = "Export as SRT"
+        case .json:
+            panel.nameFieldStringValue = "\(baseName).json"
+            panel.allowedContentTypes = [.json]
+            panel.title = "Export as JSON"
+        }
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let content: String
+        switch format {
+        case .srt:  content = buildSRT()
+        case .json: content = buildJSON()
+        }
+        try? content.write(to: url, atomically: true, encoding: .utf8)
+    }
+
+    private func buildSRT() -> String {
+        guard !parsedUtterances.isEmpty else {
+            // Fallback: plain text as a single subtitle entry
+            return "1\n00:00:00,000 --> 00:00:01,000\n\(transcriptText)\n"
+        }
+        var lines: [String] = []
+        for (i, utt) in parsedUtterances.enumerated() {
+            let start = srtTimestamp(utt.time)
+            let endSeconds = (i + 1 < parsedUtterances.count)
+                ? secondsFromTime(parsedUtterances[i + 1].time)
+                : secondsFromTime(utt.time) + 5
+            let end = srtTimestampFromSeconds(endSeconds)
+            lines.append("\(i + 1)\n\(start) --> \(end)\n\(utt.speaker): \(utt.text)")
+        }
+        return lines.joined(separator: "\n\n") + "\n"
+    }
+
+    private func buildJSON() -> String {
+        var obj: [String: Any] = [:]
+        if let url = transcriptURL {
+            obj["file"] = url.deletingPathExtension().lastPathComponent
+        }
+        if !parsedUtterances.isEmpty {
+            obj["utterances"] = parsedUtterances.enumerated().map { i, u in
+                ["index": i + 1, "speaker": u.speaker, "time": u.time, "text": u.text]
+            }
+        } else {
+            obj["text"] = transcriptText
+        }
+        guard let data = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
+              let str = String(data: data, encoding: .utf8) else { return "{}" }
+        return str
+    }
+
+    private func secondsFromTime(_ time: String) -> Int {
+        let parts = time.components(separatedBy: ":").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+        switch parts.count {
+        case 2: return parts[0] * 60 + parts[1]
+        case 3: return parts[0] * 3600 + parts[1] * 60 + parts[2]
+        default: return 0
+        }
+    }
+
+    private func srtTimestamp(_ time: String) -> String {
+        srtTimestampFromSeconds(secondsFromTime(time))
+    }
+
+    private func srtTimestampFromSeconds(_ total: Int) -> String {
+        let h = total / 3600
+        let m = (total % 3600) / 60
+        let s = total % 60
+        return String(format: "%02d:%02d:%02d,000", h, m, s)
     }
 
     // MARK: - Window factory

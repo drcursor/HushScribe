@@ -37,6 +37,8 @@ final class TranscriptionEngine {
     private(set) var downloadingModel: TranscriptionModel?
     var assetStatus: String = "Ready"
     var lastError: String?
+    /// True while a partial transcript is being built (speech detected, not yet finalised).
+    private(set) var isSpeechDetected: Bool = false
 
     private let systemCapture = SystemAudioCapture()
     private let micCapture = MicCapture()
@@ -400,13 +402,17 @@ final class TranscriptionEngine {
             vadManager: micVadManager,
             speaker: .you,
             audioSource: .microphone,
+            onSpeechStart: { [weak self] in
+                Task { @MainActor in self?.isSpeechDetected = true }
+            },
             onPartial: { text in
                 Task { @MainActor in store.volatileYouText = text }
             },
-            onFinal: { text in
+            onFinal: { [weak self] text in
                 Task { @MainActor in
                     store.volatileYouText = ""
                     store.append(Utterance(text: text, speaker: .you))
+                    self?.isSpeechDetected = false
                 }
             }
         )
@@ -427,13 +433,17 @@ final class TranscriptionEngine {
                 vadManager: sysVadManager,
                 speaker: .them,
                 audioSource: .system,
+                onSpeechStart: { [weak self] in
+                    Task { @MainActor in self?.isSpeechDetected = true }
+                },
                 onPartial: { text in
                     Task { @MainActor in store.volatileThemText = text }
                 },
-                onFinal: { text in
+                onFinal: { [weak self] text in
                     Task { @MainActor in
                         store.volatileThemText = ""
                         store.append(Utterance(text: text, speaker: .them))
+                        self?.isSpeechDetected = false
                     }
                 }
             )
@@ -507,13 +517,13 @@ final class TranscriptionEngine {
             vadManager: micVadManager,
             speaker: .you,
             audioSource: .microphone,
-            onPartial: { text in
-                Task { @MainActor in store.volatileYouText = text }
-            },
-            onFinal: { text in
+            onSpeechStart: { [weak self] in Task { @MainActor in self?.isSpeechDetected = true } },
+            onPartial: { text in Task { @MainActor in store.volatileYouText = text } },
+            onFinal: { [weak self] text in
                 Task { @MainActor in
                     store.volatileYouText = ""
                     store.append(Utterance(text: text, speaker: .you))
+                    self?.isSpeechDetected = false
                 }
             }
         )
@@ -567,11 +577,13 @@ final class TranscriptionEngine {
             vadManager: micVadManager,
             speaker: .you,
             audioSource: .microphone,
+            onSpeechStart: { [weak self] in Task { @MainActor in self?.isSpeechDetected = true } },
             onPartial: { text in Task { @MainActor in store.volatileYouText = text } },
-            onFinal: { text in
+            onFinal: { [weak self] text in
                 Task { @MainActor in
                     store.volatileYouText = ""
                     store.append(Utterance(text: text, speaker: .you))
+                    self?.isSpeechDetected = false
                 }
             }
         )
@@ -606,11 +618,13 @@ final class TranscriptionEngine {
                 vadManager: sysVadManager,
                 speaker: .them,
                 audioSource: .system,
+                onSpeechStart: { [weak self] in Task { @MainActor in self?.isSpeechDetected = true } },
                 onPartial: { text in Task { @MainActor in store.volatileThemText = text } },
-                onFinal: { text in
+                onFinal: { [weak self] text in
                     Task { @MainActor in
                         store.volatileThemText = ""
                         store.append(Utterance(text: text, speaker: .them))
+                        self?.isSpeechDetected = false
                     }
                 }
             )

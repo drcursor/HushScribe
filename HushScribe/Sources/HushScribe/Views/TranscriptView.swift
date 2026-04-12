@@ -31,23 +31,19 @@ struct TranscriptView: View {
                 .padding(.vertical, 12)
             }
             .onChange(of: utterances.count) {
-                withAnimation(.easeOut(duration: 0.2)) {
-                    proxy.scrollTo("scroll-bottom")
-                }
+                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("scroll-bottom") }
             }
             .onChange(of: volatileYouText) {
-                withAnimation(.easeOut(duration: 0.1)) {
-                    proxy.scrollTo("scroll-bottom")
-                }
+                withAnimation(.easeOut(duration: 0.1)) { proxy.scrollTo("scroll-bottom") }
             }
             .onChange(of: volatileThemText) {
-                withAnimation(.easeOut(duration: 0.1)) {
-                    proxy.scrollTo("scroll-bottom")
-                }
+                withAnimation(.easeOut(duration: 0.1)) { proxy.scrollTo("scroll-bottom") }
             }
         }
     }
 }
+
+// MARK: - Transcript Ellipsis
 
 // MARK: - Chat Bubble
 

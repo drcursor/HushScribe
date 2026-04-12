@@ -70,6 +70,12 @@ if [[ -f "$ICON_PATH" ]]; then
   echo "App icon copied"
 fi
 
+LOGO_PATH="$SWIFT_DIR/Sources/HushScribe/Assets/logo.svg"
+if [[ -f "$LOGO_PATH" ]]; then
+  cp "$LOGO_PATH" "$APP_BUNDLE/Contents/Resources/logo.svg"
+  echo "Logo copied"
+fi
+
 cp "$SWIFT_DIR/Sources/HushScribe/Info.plist" "$CONTENTS/Info.plist"
 
 echo "--- Step 3: Deep Signing with Hardened Runtime ---"

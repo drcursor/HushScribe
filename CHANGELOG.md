@@ -2,6 +2,26 @@
 
 > **Fork note:** HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io). Changes merged from the upstream Tome repository are marked with `[upstream]` in this changelog.
 
+## [3.1.1] — 2026-04-12
+
+- Updated app icons and logo.
+
+## [3.1.0] — 2026-04-11
+
+- **Settings → Main tab.** A new first tab in Settings consolidates app-level options. The notification sound toggle (moved from Privacy) lives here, along with a "Reset All Settings" button that wipes all stored preferences after confirmation. After reset, the settings window closes, the app switches to detached mode, and the onboarding wizard restarts as on first launch.
+- **Notification sound.** Optional subtle sound (system "Tink") plays when a recording session starts or stops. Off by default; toggle in Settings → Main.
+- **Auto-record toggle in attached mode.** A `waveform` toolbar button in the popover lets you enable/disable meeting auto-detection without opening Settings. A green dot appears on the icon when a meeting is actively detected.
+- **Typing ellipsis during transcription.** A small animated ellipsis (3 pt dots) appears below the VU meters and the logo pulses while speech is being processed. Speech detection is driven by the VAD `speechStart` event so it works with all backends (Parakeet, WhisperKit, Apple Speech). Detection uses `.task(id:)` for reliable re-triggering across consecutive speech segments.
+- **Attached mode fixed height.** The popover no longer grows taller as transcript content accumulates; it stays at a fixed 480×460 size.
+- **Permission explanations in onboarding.** Each permission request in the setup wizard now shows a one-line reason explaining exactly why the permission is needed.
+- **Settings → About tab.** A new last tab in Settings shows the app version, fork attribution, and full credits for all bundled models and libraries (FluidAudio, WhisperKit, mlx-swift-lm, Qwen3, Gemma 3, pyannote.audio). The separate About HushScribe panel and menu item have been removed.
+
+## [3.0.0] — 2026-04-11
+
+- **Attached mode (new default).** The app now opens as a compact popover anchored to the status bar icon by default. Click the icon to show or dismiss it. A "Detach" button in the toolbar breaks it out into a regular window; closing the window re-attaches automatically.
+- **Menu bar rewritten in AppKit.** The `MenuBarExtra` SwiftUI scene has been replaced with a native `NSStatusItem` managed by `StatusBarController`. In detached mode the icon opens a menu with all recording controls; menu items are rebuilt lazily to always reflect live state.
+- **Transcript export.** The Transcript Viewer now has an Export button next to Generate Summary. Transcripts can be exported as SRT (SubRip subtitles, one entry per speaker turn with timestamps) or JSON (structured array of `{speaker, time, text}` objects).
+
 ## [2.14.0] — 2026-04-11
 
 - **Fix: mid-session microphone device switch.** `MicCapture` now exposes `stopForSwitch()`, which tears down the tap and stops the engine without calling `engine.reset()`, keeping the AUHAL unit initialised. This makes `AudioUnitSetProperty` reliable during live device switches and prevents the mic stream from silently dropping when swapping input devices mid-session. Thanks to [@acrolyos](https://github.com/acrolyos) for the report ([Gremble-io/tome-app#27](https://github.com/Gremble-io/tome-app/issues/27)).

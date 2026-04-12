@@ -50,8 +50,8 @@ final class MicCapture: @unchecked Sendable {
             }
 
             let inputNode = self.engine.inputNode
-            let format = inputNode.outputFormat(forBus: 0)
-
+            let format = inputNode.inputFormat(forBus: 0)
+            // ^^ change based on https://github.com/Gremble-io/tome-app/pull/28
             // outputFormat can report sampleRate=0 / channelCount=0 on first access before the
             // engine is started (e.g. immediately after permission is granted on first run).
             // Fall back to a standard format — AVAudioEngine will convert from the real device

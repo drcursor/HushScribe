@@ -60,11 +60,32 @@ struct OnboardingView: View {
                 Spacer()
 
                 // Icon
-                Image(systemName: steps[currentStep].icon)
-                    .font(.system(size: 40, weight: .light))
-                    .foregroundStyle(Color.accent1)
-                    .frame(height: 52)
-                    .id(currentStep) // force transition on change
+                if currentStep == 0 {
+                    if let svgURL = Bundle.main.url(forResource: "logo", withExtension: "svg"),
+                       let svgImage = NSImage(contentsOf: svgURL) {
+                        Image(nsImage: svgImage)
+                            .resizable()
+                            .renderingMode(.template)
+                            .interpolation(.high)
+                            .scaledToFit()
+                            .frame(width: 72, height: 72)
+                            .foregroundStyle(Color.accent1)
+                            .id(currentStep)
+                    } else {
+                        Image(nsImage: NSApplication.shared.applicationIconImage)
+                            .resizable()
+                            .interpolation(.high)
+                            .scaledToFit()
+                            .frame(width: 72, height: 72)
+                            .id(currentStep)
+                    }
+                } else {
+                    Image(systemName: steps[currentStep].icon)
+                        .font(.system(size: 40, weight: .light))
+                        .foregroundStyle(Color.accent1)
+                        .frame(height: 52)
+                        .id(currentStep)
+                }
 
                 Spacer().frame(height: 20)
 
@@ -117,18 +138,21 @@ struct OnboardingView: View {
                         PermissionRow(
                             icon: "mic",
                             label: "Microphone",
+                            reason: "Captures your voice during recording sessions.",
                             granted: micGranted,
                             action: requestMic
                         )
                         PermissionRow(
                             icon: "rectangle.inset.filled.on.rectangle",
                             label: "Screen Recording",
+                            reason: "Captures system audio from Teams, Zoom, and other apps.",
                             granted: screenGranted,
                             action: requestScreen
                         )
                         PermissionRow(
                             icon: "waveform",
                             label: "Speech Recognition",
+                            reason: "Required only when using the Apple Speech transcription model.",
                             granted: speechGranted,
                             action: requestSpeech
                         )
@@ -271,16 +295,23 @@ struct OnboardingView: View {
 private struct PermissionRow: View {
     let icon: String
     let label: String
+    let reason: String
     let granted: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 Image(systemName: icon)
                     .frame(width: 16)
-                Text(label)
-                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(granted ? .green : .primary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(label)
+                        .font(.system(size: 13, weight: .medium))
+                    Text(reason)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
                 if granted {
                     Image(systemName: "checkmark.circle.fill")

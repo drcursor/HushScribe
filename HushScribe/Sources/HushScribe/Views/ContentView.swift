@@ -22,11 +22,16 @@ struct ContentView: View {
     var recordingState: RecordingState
     var transcriptStore: TranscriptStore
     var transcriptionEngine: TranscriptionEngine
+    var meetingMonitor: MeetingMonitor
+    /// When ContentView is hosted outside the SwiftUI scene (e.g. in a popover),
+    /// the caller can supply an override so the Settings button still works.
+    var openSettingsOverride: (() -> Void)? = nil
     @State private var sessionStore = SessionStore()
     @Environment(\.openSettings) private var openSettings
     @State private var transcriptLogger = TranscriptLogger()
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var showOnboarding = false
+    @State private var showQuitConfirmation = false
     @State private var audioLevel: Float = 0
     @State private var micLevel: Float = 0
     @State private var sysLevel: Float = 0
@@ -44,196 +49,160 @@ struct ContentView: View {
     @State private var speakerNamingContinuation: CheckedContinuation<[String: String], Never>?
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Glass top bar
-            topBar
-
-            // Icon toolbar
-            windowToolbar
-
-            // Main content area
-            if !isRunning && transcriptStore.utterances.isEmpty
-                && transcriptStore.volatileYouText.isEmpty
-                && transcriptStore.volatileThemText.isEmpty {
-                if transcriptionEngine.modelDownloadState != .ready {
-                    modelDownloadState
-                } else {
-                    emptyState
+        coreContent
+            .background(notificationHandlers)
+            .task { await pollAudioLevels() }
+            .task { await runSilenceTimer() }
+            .task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(10))
+                    await transcriptLogger.flushIfNeeded()
                 }
-            } else {
-                TranscriptView(
-                    utterances: transcriptStore.utterances,
-                    volatileYouText: transcriptStore.volatileYouText,
-                    volatileThemText: transcriptStore.volatileThemText
-                )
             }
+            .onChange(of: settings.inputDeviceID) {
+                if isRunning { transcriptionEngine.restartMic(inputDeviceID: settings.inputDeviceID) }
+            }
+            .onChange(of: settings.transcriptionModel) {
+                transcriptionEngine.setModel(settings.transcriptionModel)
+            }
+            .onChange(of: transcriptStore.utterances.count) {
+                handleNewUtterance()
+            }
+            .task(id: transcriptionEngine.isSpeechDetected) {
+                if transcriptionEngine.isSpeechDetected {
+                    while !Task.isCancelled {
+                        withAnimation(.easeIn(duration: 0.25)) { logoFlash = true }
+                        try? await Task.sleep(for: .milliseconds(350))
+                        guard !Task.isCancelled else { break }
+                        withAnimation(.easeOut(duration: 0.35)) { logoFlash = false }
+                        try? await Task.sleep(for: .milliseconds(250))
+                    }
+                } else {
+                    withAnimation(.easeOut(duration: 0.3)) { logoFlash = false }
+                }
+            }
+    }
 
-            // Save banner
+    private var coreContent: some View {
+        VStack(spacing: 0) {
+            topBar
+            windowToolbar
+            mainContentArea
             if let url = savedFileURL, activeSessionType == nil {
                 saveBanner(url: url)
             }
-
-            // Waveform ribbon
-            WaveformView(
-                isRecording: isRunning,
-                micLevel: micLevel,
-                sysLevel: sysLevel,
-                isMicMuted: transcriptionEngine.isMicMuted,
-                isSysMuted: transcriptionEngine.isSysMuted,
-                onToggleMicMute: { transcriptionEngine.isMicMuted.toggle() },
-                onToggleSysMute: { transcriptionEngine.isSysMuted.toggle() }
-            )
-
-            // Silence timeout countdown / pause indicator
-            if isRunning {
-                if transcriptionEngine.isPaused {
-                    HStack(spacing: 4) {
-                        Image(systemName: "pause.fill")
-                            .font(.system(size: 10))
-                        Text("Paused")
-                            .font(.system(size: 11))
-                    }
-                    .foregroundStyle(Color.fg3)
-                    .padding(.vertical, 4)
-                } else {
-                    silenceTimeoutDisplay
-                }
-            }
-
-            // Glass control bar
-            ControlBar(
-                isRecording: isRunning,
-                isPaused: transcriptionEngine.isPaused,
-                modelsReady: transcriptionEngine.modelDownloadState == .ready,
-                activeSessionType: activeSessionType,
-                audioLevel: audioLevel,
-                detectedApp: detectedAppName,
-                silenceSeconds: silenceSeconds,
-                statusMessage: transcriptionEngine.modelDownloadState == .downloading ? nil : transcriptionEngine.assetStatus,
-                errorMessage: transcriptionEngine.lastError,
-                onStartCallCapture: { startSession(type: .callCapture) },
-                onStartVoiceMemo: { startSession(type: .voiceMemo) },
-                onStop: stopSession,
-                onPause: pauseFromMenu,
-                onResume: resumeFromMenu
-            )
+            waveformSection
+            controlBarSection
         }
         .frame(minWidth: 480, maxWidth: 480, minHeight: 360)
         .background(Color.bg0)
-        .overlay {
-            if showOnboarding {
-                OnboardingView(isPresented: $showOnboarding, settings: settings)
-                    .transition(.opacity)
-            }
+        .confirmationDialog("Quit HushScribe?", isPresented: $showQuitConfirmation, titleVisibility: .visible) {
+            Button("Quit", role: .destructive) { NSApplication.shared.terminate(nil) }
+            Button("Cancel", role: .cancel) {}
         }
-        .overlay {
-            if showSpeakerNaming {
-                SpeakerNamingView(
-                    speakerLabels: speakerLabelsForNaming,
-                    previews: speakerPreviewsForNaming,
-                    onApply: { mapping in
-                        showSpeakerNaming = false
-                        speakerNamingContinuation?.resume(returning: mapping)
-                        speakerNamingContinuation = nil
-                    },
-                    onSkip: {
-                        showSpeakerNaming = false
-                        speakerNamingContinuation?.resume(returning: [:])
-                        speakerNamingContinuation = nil
-                    }
-                )
-                .transition(.opacity)
-            }
-        }
-        .onChange(of: showOnboarding) {
-            if !showOnboarding {
-                hasCompletedOnboarding = true
-            }
-        }
+        .overlay { if showOnboarding { OnboardingView(isPresented: $showOnboarding, settings: settings).transition(.opacity) } }
+        .overlay { if showSpeakerNaming { speakerNamingOverlay } }
+        .onChange(of: showOnboarding) { if !showOnboarding { hasCompletedOnboarding = true } }
         .task {
             if !hasCompletedOnboarding {
                 showOnboarding = true
-                // LSUIElement apps don't auto-activate; bring the window to front for onboarding.
                 NSApp.setActivationPolicy(.regular)
                 NSApp.activate(ignoringOtherApps: true)
                 NSApp.mainWindow?.makeKeyAndOrderFront(nil)
             }
         }
-        // Audio level polling
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(100))
-                if transcriptionEngine.isRunning {
-                    let newMic = transcriptionEngine.micAudioLevel
-                    let newSys = transcriptionEngine.sysAudioLevel
-                    let newCombined = transcriptionEngine.audioLevel
-                    if abs(newMic - micLevel) > 0.005 { micLevel = newMic }
-                    if abs(newSys - sysLevel) > 0.005 { sysLevel = newSys }
-                    if abs(newCombined - audioLevel) > 0.005 { audioLevel = newCombined }
-                    if audioLevel > 0.01 {
-                        silenceSeconds = 0
-                    }
-                } else if audioLevel != 0 {
-                    audioLevel = 0
-                    micLevel = 0
-                    sysLevel = 0
-                }
+    }
+
+    @ViewBuilder
+    private var mainContentArea: some View {
+        if !isRunning && transcriptStore.utterances.isEmpty
+            && transcriptStore.volatileYouText.isEmpty
+            && transcriptStore.volatileThemText.isEmpty
+            && !transcriptionEngine.isSpeechDetected {
+            if transcriptionEngine.modelDownloadState != .ready {
+                modelDownloadState
+            } else {
+                emptyState
+            }
+        } else {
+            TranscriptView(
+                utterances: transcriptStore.utterances,
+                volatileYouText: transcriptStore.volatileYouText,
+                volatileThemText: transcriptStore.volatileThemText
+            )
+        }
+    }
+
+    private var speakerNamingOverlay: some View {
+        SpeakerNamingView(
+            speakerLabels: speakerLabelsForNaming,
+            previews: speakerPreviewsForNaming,
+            onApply: { mapping in
+                showSpeakerNaming = false
+                speakerNamingContinuation?.resume(returning: mapping)
+                speakerNamingContinuation = nil
+            },
+            onSkip: {
+                showSpeakerNaming = false
+                speakerNamingContinuation?.resume(returning: [:])
+                speakerNamingContinuation = nil
+            }
+        )
+        .transition(.opacity)
+    }
+
+    private var notificationHandlers: some View {
+        Color.clear
+            .onReceive(NotificationCenter.default.publisher(for: .hushscribeStartCallCapture)) { _ in
+                startSession(type: .callCapture)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .hushscribeStartVoiceMemo)) { _ in
+                startSession(type: .voiceMemo)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .hushscribeStopRecording)) { _ in
+                stopSession()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .hushscribePauseRecording)) { _ in
+                pauseFromMenu()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .hushscribeResumeRecording)) { _ in
+                resumeFromMenu()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .hushscribeOpenSummarize)) { _ in
+                SummarizeView.openWindow(settings: settings, logger: transcriptLogger)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .hushscribeShowOnboarding)) { _ in
+                showOnboarding = true
+            }
+    }
+
+    private func pollAudioLevels() async {
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(100))
+            if transcriptionEngine.isRunning {
+                let newMic = transcriptionEngine.micAudioLevel
+                let newSys = transcriptionEngine.sysAudioLevel
+                let newCombined = transcriptionEngine.audioLevel
+                if abs(newMic - micLevel) > 0.005 { micLevel = newMic }
+                if abs(newSys - sysLevel) > 0.005 { sysLevel = newSys }
+                if abs(newCombined - audioLevel) > 0.005 { audioLevel = newCombined }
+                if audioLevel > 0.01 { silenceSeconds = 0 }
+            } else if audioLevel != 0 {
+                audioLevel = 0; micLevel = 0; sysLevel = 0
             }
         }
-        // Silence auto-stop + elapsed timer
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(1))
-                guard isRunning else {
-                    silenceSeconds = 0
-                    continue
-                }
-                guard !transcriptionEngine.isPaused else { continue }
-                sessionElapsed += 1
-                if audioLevel < 0.01 {
-                    silenceSeconds += 1
-                    if silenceSeconds >= settings.silenceTimeoutSeconds {
-                        stopSession()
-                    }
-                }
+    }
+
+    private func runSilenceTimer() async {
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(1))
+            guard isRunning else { silenceSeconds = 0; continue }
+            guard !transcriptionEngine.isPaused else { continue }
+            sessionElapsed += 1
+            if audioLevel < 0.01 {
+                silenceSeconds += 1
+                if silenceSeconds >= settings.silenceTimeoutSeconds { stopSession() }
             }
-        }
-        // Transcript buffer flush
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(10))
-                await transcriptLogger.flushIfNeeded()
-            }
-        }
-        // Menu bar action notifications
-        .onReceive(NotificationCenter.default.publisher(for: .hushscribeStartCallCapture)) { _ in
-            startSession(type: .callCapture)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .hushscribeStartVoiceMemo)) { _ in
-            startSession(type: .voiceMemo)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .hushscribeStopRecording)) { _ in
-            stopSession()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .hushscribePauseRecording)) { _ in
-            pauseFromMenu()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .hushscribeResumeRecording)) { _ in
-            resumeFromMenu()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .hushscribeOpenSummarize)) { _ in
-            SummarizeView.openWindow(settings: settings, logger: transcriptLogger)
-        }
-        .onChange(of: settings.inputDeviceID) {
-            if isRunning {
-                transcriptionEngine.restartMic(inputDeviceID: settings.inputDeviceID)
-            }
-        }
-        .onChange(of: settings.transcriptionModel) {
-            transcriptionEngine.setModel(settings.transcriptionModel)
-        }
-        .onChange(of: transcriptStore.utterances.count) {
-            handleNewUtterance()
         }
     }
 
@@ -310,15 +279,43 @@ struct ContentView: View {
         HStack(spacing: 0) {
             toolbarButton(icon: "doc.text.magnifyingglass", label: "Transcripts") {
                 SummarizeView.openWindow(settings: settings, logger: transcriptLogger)
+                if settings.mainWindowMode == .attached {
+                    NotificationCenter.default.post(name: .hushscribeClosePopover, object: nil)
+                }
             }
             toolbarButton(icon: "gear", label: "Settings") {
                 settings.preferredSettingsTab = 0
-                openSettings()
+                if let openSettingsOverride {
+                    openSettingsOverride()
+                } else {
+                    openSettings()
+                }
             }
             Spacer()
-            toolbarButton(icon: "eye.slash", label: "Hide") {
-                NSApp.windows.first { (w: NSWindow) in w.isVisible && !(w is NSPanel) && w.level == .normal }?.orderOut(nil)
-                NSApp.setActivationPolicy(.accessory)
+            if settings.mainWindowMode == .attached {
+                toolbarButton(
+                    icon: settings.autoMeetingDetect ? "waveform.badge.magnifyingglass" : "waveform.slash",
+                    label: "Auto"
+                ) {
+                    settings.autoMeetingDetect.toggle()
+                }
+                .opacity(settings.autoMeetingDetect ? 1.0 : 0.4)
+                .overlay(alignment: .topTrailing) {
+                    if settings.autoMeetingDetect && meetingMonitor.isMeetingActive {
+                        Circle().fill(Color.green).frame(width: 6, height: 6)
+                            .offset(x: 2, y: -2)
+                    }
+                }
+                toolbarButton(icon: "power", label: "Quit") {
+                    showQuitConfirmation = true
+                }
+                toolbarButton(icon: "arrow.up.left.and.arrow.down.right", label: "Detach") {
+                    settings.mainWindowMode = .detached
+                }
+            } else {
+                toolbarButton(icon: "arrow.down.right.and.arrow.up.left", label: "Attach") {
+                    settings.mainWindowMode = .attached
+                }
             }
         }
         .padding(.horizontal, 4)
@@ -422,6 +419,65 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    // MARK: - Waveform + Countdown Section
+
+    private var waveformSection: some View {
+        VStack(spacing: 0) {
+            if isRunning {
+                statusIndicator
+            }
+            WaveformView(
+                isRecording: isRunning,
+                micLevel: micLevel,
+                sysLevel: sysLevel,
+                isMicMuted: transcriptionEngine.isMicMuted,
+                isSysMuted: transcriptionEngine.isSysMuted,
+                onToggleMicMute: { transcriptionEngine.isMicMuted.toggle() },
+                onToggleSysMute: { transcriptionEngine.isSysMuted.toggle() }
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var statusIndicator: some View {
+        if transcriptionEngine.isPaused {
+            HStack(spacing: 4) {
+                Image(systemName: "pause.fill")
+                    .font(.system(size: 10))
+                Text("Paused")
+                    .font(.system(size: 11))
+            }
+            .foregroundStyle(Color.fg3)
+            .padding(.vertical, 4)
+        } else if transcriptionEngine.isSpeechDetected {
+            TypingEllipsis()
+                .padding(.vertical, 4)
+        } else {
+            silenceTimeoutDisplay
+        }
+    }
+
+    // MARK: - Control Bar Section
+
+    private var controlBarSection: some View {
+        ControlBar(
+            isRecording: isRunning,
+            isPaused: transcriptionEngine.isPaused,
+            modelsReady: transcriptionEngine.modelDownloadState == .ready,
+            activeSessionType: activeSessionType,
+            audioLevel: audioLevel,
+            detectedApp: detectedAppName,
+            silenceSeconds: silenceSeconds,
+            statusMessage: transcriptionEngine.modelDownloadState == .downloading ? nil : transcriptionEngine.assetStatus,
+            errorMessage: transcriptionEngine.lastError,
+            onStartCallCapture: { startSession(type: .callCapture) },
+            onStartVoiceMemo: { startSession(type: .voiceMemo) },
+            onStop: stopSession,
+            onPause: pauseFromMenu,
+            onResume: resumeFromMenu
+        )
+    }
+
     // MARK: - Silence Timeout Display
 
     private var silenceTimeoutDisplay: some View {
@@ -486,6 +542,7 @@ struct ContentView: View {
     // MARK: - Actions
 
     private func startSession(type: SessionType) {
+        if settings.notificationSoundEnabled { NSSound(named: .init("Tink"))?.play() }
         guard settings.hasAcknowledgedDisclaimer else {
             transcriptionEngine.lastError = "Please complete the setup wizard and acknowledge the legal disclaimer before recording."
             return
@@ -565,6 +622,7 @@ struct ContentView: View {
     }
 
     private func stopSession() {
+        if settings.notificationSoundEnabled { NSSound(named: .init("Tink"))?.play() }
         let wasCallCapture = activeSessionType == .callCapture
         activeSessionType = nil
         detectedAppName = nil
@@ -645,3 +703,28 @@ struct ContentView: View {
         }
     }
 }
+
+// MARK: - Typing Ellipsis
+
+private struct TypingEllipsis: View {
+    @State private var dotCount = 1
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<3, id: \.self) { i in
+                Circle()
+                    .fill(Color.secondary)
+                    .frame(width: 3, height: 3)
+                    .opacity(i < dotCount ? 0.6 : 0.2)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(400))
+                dotCount = dotCount % 3 + 1
+            }
+        }
+    }
+}
+

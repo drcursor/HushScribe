@@ -9,25 +9,84 @@ struct SettingsView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
+            MainSettingsTab(settings: settings)
+                .tabItem { Label("Main", systemImage: "gearshape") }
+                .tag(0)
             RecordingSettingsTab(settings: settings)
                 .tabItem { Label("Recording", systemImage: "waveform") }
-                .tag(0)
+                .tag(1)
             MeetingDetectionSettingsTab(settings: settings)
                 .tabItem { Label("Meetings", systemImage: "person.2") }
-                .tag(1)
+                .tag(2)
             ModelsSettingsTab(settings: settings, engine: engine, llmEngine: LLMSummaryEngine.shared)
                 .tabItem { Label("Models", systemImage: "cpu") }
-                .tag(2)
+                .tag(3)
             OutputSettingsTab(settings: settings)
                 .tabItem { Label("Output", systemImage: "folder") }
-                .tag(3)
+                .tag(4)
             PrivacySettingsTab(settings: settings)
                 .tabItem { Label("Privacy", systemImage: "lock.shield") }
-                .tag(4)
+                .tag(5)
+            AboutSettingsTab()
+                .tabItem { Label("About", systemImage: "info.circle") }
+                .tag(6)
         }
         .frame(width: 540, height: 460)
         .onAppear { selectedTab = settings.preferredSettingsTab }
         .onChange(of: settings.preferredSettingsTab) { _, tab in selectedTab = tab }
+    }
+}
+
+// MARK: - Main Tab
+
+private struct MainSettingsTab: View {
+    @Bindable var settings: AppSettings
+    @State private var showResetConfirmation = false
+    @State private var settingsWindowRef: NSWindow?
+
+    var body: some View {
+        Form {
+            Section("Notifications") {
+                Toggle("Play sound on recording start/stop", isOn: $settings.notificationSoundEnabled)
+                    .font(.system(size: 12))
+                Text("Plays a subtle sound when a recording session starts or stops.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Button(role: .destructive) {
+                    settingsWindowRef = NSApp.keyWindow
+                    showResetConfirmation = true
+                } label: {
+                    Text("Reset All Settings…")
+                        .font(.system(size: 12))
+                }
+                Text("Removes all stored preferences and resets HushScribe to its defaults. This cannot be undone.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .confirmationDialog(
+            "Reset all settings?",
+            isPresented: $showResetConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Reset", role: .destructive) {
+                settings.reset()
+                settings.mainWindowMode = .detached
+                UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+                settingsWindowRef?.close()
+                settingsWindowRef = nil
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    NotificationCenter.default.post(name: .hushscribeShowOnboarding, object: nil)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("All preferences will be cleared and reset to defaults. This cannot be undone.")
+        }
     }
 }
 
@@ -646,5 +705,127 @@ private struct PrivacySettingsTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+// MARK: - About Tab
+
+private struct AboutSettingsTab: View {
+    private let appVersion: String = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // App header
+                HStack(spacing: 14) {
+                    if let svgURL = Bundle.main.url(forResource: "logo", withExtension: "svg"),
+                       let svgImage = NSImage(contentsOf: svgURL) {
+                        Image(nsImage: svgImage)
+                            .resizable()
+                            .interpolation(.high)
+                            .scaledToFit()
+                            .frame(width: 48, height: 48)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("HushScribe")
+                            .font(.title2.bold())
+                        Text("Version \(appVersion)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Divider()
+
+                // Fork attribution
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Attribution")
+                        .font(.headline)
+                    Text("HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io), which itself started from [OpenGranola](https://github.com/yazinsai/OpenGranola), substantially extended with additional features. Code is generated with help of Claude Code.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("Maintained by [drcursor](https://github.com/drcursor) · [github.com/drcursor/HushScribe](https://github.com/drcursor/HushScribe)")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+
+                Divider()
+
+                // Libraries and models
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Models & Libraries")
+                        .font(.headline)
+
+                    CreditRow(
+                        name: "FluidAudio",
+                        url: "https://github.com/FluidInference/FluidAudio",
+                        author: "FluidInference",
+                        description: "Parakeet-TDT v3 ASR and Silero VAD — default transcription model and voice activity detection."
+                    )
+                    CreditRow(
+                        name: "WhisperKit",
+                        url: "https://github.com/argmaxinc/WhisperKit",
+                        author: "Argmax",
+                        description: "On-device Whisper inference on Apple Silicon. Whisper was originally developed by OpenAI."
+                    )
+                    CreditRow(
+                        name: "mlx-swift-lm / mlx-swift",
+                        url: "https://github.com/ml-explore/mlx-swift-lm",
+                        author: "Apple",
+                        description: "MLX inference stack for Swift — runs LLM summary models on Apple Silicon."
+                    )
+                    CreditRow(
+                        name: "Qwen3",
+                        url: "https://huggingface.co/Qwen",
+                        author: "Alibaba Cloud",
+                        description: "Default on-device LLM for AI summaries."
+                    )
+                    CreditRow(
+                        name: "Gemma 3",
+                        url: "https://ai.google.dev/gemma",
+                        author: "Google",
+                        description: "Alternative on-device LLM for AI summaries."
+                    )
+                    CreditRow(
+                        name: "pyannote.audio",
+                        url: "https://github.com/pyannote/pyannote-audio",
+                        author: "pyannote",
+                        description: "Speaker diarization model for post-session speaker separation."
+                    )
+                }
+
+                Divider()
+
+                Text("Licensed under the MIT License.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+private struct CreditRow: View {
+    let name: String
+    let url: String
+    let author: String
+    let description: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
+                Link(name, destination: URL(string: url)!)
+                    .font(.system(size: 12).bold())
+                Text("by \(author)")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            Text(description)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }

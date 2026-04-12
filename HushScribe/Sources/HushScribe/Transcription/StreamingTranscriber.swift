@@ -8,6 +8,7 @@ final class StreamingTranscriber: @unchecked Sendable {
     private let vadManager: VadManager
     private let speaker: Speaker
     private let audioSource: AudioSource
+    private let onSpeechStart: (@Sendable () -> Void)?
     private let onPartial: @Sendable (String) -> Void
     private let onFinal: @Sendable (String) -> Void
     private let log = Logger(subsystem: "com.drcursor.hushscribe", category: "StreamingTranscriber")
@@ -26,6 +27,7 @@ final class StreamingTranscriber: @unchecked Sendable {
         vadManager: VadManager,
         speaker: Speaker,
         audioSource: AudioSource = .microphone,
+        onSpeechStart: (@Sendable () -> Void)? = nil,
         onPartial: @escaping @Sendable (String) -> Void,
         onFinal: @escaping @Sendable (String) -> Void
     ) {
@@ -33,6 +35,7 @@ final class StreamingTranscriber: @unchecked Sendable {
         self.vadManager = vadManager
         self.speaker = speaker
         self.audioSource = audioSource
+        self.onSpeechStart = onSpeechStart
         self.onPartial = onPartial
         self.onFinal = onFinal
     }
@@ -89,6 +92,7 @@ final class StreamingTranscriber: @unchecked Sendable {
                         case .speechStart:
                             isSpeaking = true
                             speechSamples.removeAll(keepingCapacity: true)
+                            onSpeechStart?()
                             diagLog("[\(self.speaker.rawValue)] speech start")
 
                         case .speechEnd:

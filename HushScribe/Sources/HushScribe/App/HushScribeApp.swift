@@ -30,145 +30,46 @@ struct HushScribeApp: App {
                 settings: settings,
                 recordingState: recordingState,
                 transcriptStore: transcriptStore,
-                transcriptionEngine: transcriptionEngine
+                transcriptionEngine: transcriptionEngine,
+                meetingMonitor: meetingMonitor
             )
-                .onAppear {
-                    settings.applyScreenShareVisibility()
-                    meetingMonitor.configure(settings: settings, recordingState: recordingState)
+            .background(
+                SettingsBridge { action in
+                    appDelegate.statusBarController.setOpenSettings(action)
                 }
+            )
+            .onAppear {
+                settings.applyScreenShareVisibility()
+                meetingMonitor.configure(settings: settings, recordingState: recordingState)
+                appDelegate.statusBarController.setup(
+                    settings: settings,
+                    recordingState: recordingState,
+                    meetingMonitor: meetingMonitor,
+                    transcriptStore: transcriptStore,
+                    transcriptionEngine: transcriptionEngine
+                )
+            }
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 480, height: 480)
         .windowResizability(.contentSize)
         .commands {
-            CommandGroup(replacing: .appInfo) {
-                Button("About HushScribe") {
-                    let credits = NSAttributedString(
-                        string: "A fork of Tome by Gremble-io\nmaintained by drcursor\ngithub.com/drcursor/HushScribe",
-                        attributes: [.font: NSFont.systemFont(ofSize: 11)]
-                    )
-                    NSApp.orderFrontStandardAboutPanel(options: [
-                        .credits: credits
-                    ])
-                }
-            }
+            CommandGroup(replacing: .appInfo) { }
         }
         Settings {
             SettingsView(settings: settings, engine: transcriptionEngine)
         }
-        MenuBarExtra {
-            MenuBarMenuView(recordingState: recordingState, settings: settings, meetingMonitor: meetingMonitor)
-        } label: {
-            Image(systemName: menuBarIconName)
-                .symbolRenderingMode(.monochrome)
-        }
-    }
-
-    private var menuBarIconName: String {
-        if recordingState.isPaused {
-            return "pause.circle.fill"
-        } else if recordingState.isRecording {
-            return "record.circle.fill"
-        } else {
-            return "quote.bubble"
-        }
     }
 }
 
-// Extracted so it can use @Environment(\.openWindow)
-struct MenuBarMenuView: View {
-    @Environment(\.openWindow) private var openWindow
+/// Captures the SwiftUI openSettings environment action and forwards it to an AppKit caller.
+private struct SettingsBridge: View {
     @Environment(\.openSettings) private var openSettings
-    var recordingState: RecordingState
-    @Bindable var settings: AppSettings
-    var meetingMonitor: MeetingMonitor
-    @State private var isWindowVisible = false
+    var onCapture: (@escaping () -> Void) -> Void
 
     var body: some View {
-        Text("HushScribe")
-            .font(.headline)
-            .onAppear { isWindowVisible = checkWindowVisible() }
-        Divider()
-        Button("Show HushScribe") {
-            NSApp.setActivationPolicy(.regular)
-            if let existing = NSApp.windows.first(where: { (w: NSWindow) in !(w is NSPanel) && w.level == .normal }) {
-                existing.makeKeyAndOrderFront(nil)
-            } else {
-                openWindow(id: "main")
-            }
-            NSApp.activate(ignoringOtherApps: true)
-            isWindowVisible = true
-        }
-        Button("Hide HushScribe") {
-            NSApp.windows.first { (w: NSWindow) in w.isVisible && !(w is NSPanel) && w.level == .normal }?.orderOut(nil)
-            NSApp.setActivationPolicy(.accessory)
-            isWindowVisible = false
-        }
-        Divider()
-        if !recordingState.isRecording {
-            Button("Start Call Capture") {
-                NotificationCenter.default.post(name: .hushscribeStartCallCapture, object: nil)
-            }
-            Button("Start Voice Memo") {
-                NotificationCenter.default.post(name: .hushscribeStartVoiceMemo, object: nil)
-            }
-        } else {
-            if recordingState.isPaused {
-                Button("Resume Recording") {
-                    NotificationCenter.default.post(name: .hushscribeResumeRecording, object: nil)
-                }
-            } else {
-                Button("Pause Recording") {
-                    NotificationCenter.default.post(name: .hushscribePauseRecording, object: nil)
-                }
-            }
-            Button("Stop Recording") {
-                NotificationCenter.default.post(name: .hushscribeStopRecording, object: nil)
-            }
-        }
-        Divider()
-        Button {
-            settings.autoMeetingDetect.toggle()
-        } label: {
-            HStack {
-                Text("Auto-record meetings")
-                if settings.autoMeetingDetect {
-                    Image(systemName: "checkmark")
-                }
-            }
-        }
-        if settings.autoMeetingDetect && meetingMonitor.isMeetingActive {
-            Text("Meeting detected")
-                .foregroundStyle(.secondary)
-        }
-        Divider()
-        Button("Transcript Viewer…") {
-            NotificationCenter.default.post(name: .hushscribeOpenSummarize, object: nil)
-        }
-        Divider()
-        Button("Settings...") {
-            openSettings()
-            NSApp.activate(ignoringOtherApps: true)
-        }
-        .keyboardShortcut(",")
-        Button("About HushScribe") {
-            NSApp.orderFrontStandardAboutPanel(options: [
-                .credits: NSAttributedString(
-                    string: "A fork of Tome by Gremble-io\nmaintained by drcursor\ngithub.com/drcursor/HushScribe",
-                    attributes: [.font: NSFont.systemFont(ofSize: 11)]
-                )
-            ])
-            NSApp.activate(ignoringOtherApps: true)
-        }
-        Divider()
-        Button("Quit HushScribe") {
-            NSApplication.shared.terminate(nil)
-        }
-        .keyboardShortcut("q")
-    }
-
-    private func checkWindowVisible() -> Bool {
-        NSApp.windows.contains { (w: NSWindow) in w.isVisible && !(w is NSPanel) && w.level == .normal }
+        Color.clear
+            .onAppear { onCapture { openSettings() } }
     }
 }
 
@@ -176,6 +77,7 @@ struct MenuBarMenuView: View {
 /// Also hides the main window on launch for returning users (app lives in menu bar).
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    let statusBarController = StatusBarController()
     private var windowObserver: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {

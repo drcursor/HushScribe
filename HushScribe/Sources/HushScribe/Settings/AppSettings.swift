@@ -28,6 +28,11 @@ enum SessionType: String {
     case voiceMemo
 }
 
+enum MainWindowMode: String, CaseIterable {
+    case attached
+    case detached
+}
+
 enum TranscriptionModel: String, CaseIterable {
     case parakeet = "parakeet"
     case whisperBase = "whisperBase"
@@ -164,6 +169,16 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(hasAcknowledgedDisclaimer, forKey: "hasAcknowledgedDisclaimer") }
     }
 
+    /// Controls how the main window behaves relative to the status bar.
+    var mainWindowMode: MainWindowMode {
+        didSet { UserDefaults.standard.set(mainWindowMode.rawValue, forKey: "mainWindowMode") }
+    }
+
+    /// When true, a subtle sound plays when recording starts or stops.
+    var notificationSoundEnabled: Bool {
+        didSet { UserDefaults.standard.set(notificationSoundEnabled, forKey: "notificationSoundEnabled") }
+    }
+
     /// When true, all app windows are invisible to screen sharing / recording.
     var hideFromScreenShare: Bool {
         didSet {
@@ -207,12 +222,41 @@ final class AppSettings {
         self.vaultMeetingsPath = defaults.string(forKey: "vaultMeetingsPath") ?? NSString("~/Documents/HushScribe/Meetings").expandingTildeInPath
         self.vaultVoicePath = defaults.string(forKey: "vaultVoicePath") ?? NSString("~/Documents/HushScribe/Voice").expandingTildeInPath
         self.hasAcknowledgedDisclaimer = defaults.bool(forKey: "hasAcknowledgedDisclaimer")
+        self.notificationSoundEnabled = defaults.bool(forKey: "notificationSoundEnabled")
+        let storedMode = defaults.string(forKey: "mainWindowMode") ?? ""
+        self.mainWindowMode = MainWindowMode(rawValue: storedMode) ?? .attached
         // Default to true (hidden) if key has never been set
         if defaults.object(forKey: "hideFromScreenShare") == nil {
             self.hideFromScreenShare = true
         } else {
             self.hideFromScreenShare = defaults.bool(forKey: "hideFromScreenShare")
         }
+    }
+
+    /// Resets all settings to their defaults.
+    func reset() {
+        transcriptionLocale = "en-US"
+        inputDeviceID = 0
+        silenceTimeoutSeconds = 120
+        transcriptionModel = .parakeet
+        summaryModel = .appleNL
+        summaryTemperature = 0.3
+        summaryMaxTokens = 4000
+        customSummaryPrompts = [
+            CustomSummaryPrompt(name: "", body: ""),
+            CustomSummaryPrompt(name: "", body: ""),
+            CustomSummaryPrompt(name: "", body: ""),
+        ]
+        sysVadThreshold = 0.92
+        autoMeetingDetect = false
+        meetingDetectDelaySecs = 3
+        meetingStopDelaySecs = 5
+        vaultMeetingsPath = NSString("~/Documents/HushScribe/Meetings").expandingTildeInPath
+        vaultVoicePath = NSString("~/Documents/HushScribe/Voice").expandingTildeInPath
+        hasAcknowledgedDisclaimer = false
+        mainWindowMode = .attached
+        hideFromScreenShare = true
+        notificationSoundEnabled = false
     }
 
     /// Apply current screen-share visibility to all app windows.
