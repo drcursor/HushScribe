@@ -2,6 +2,17 @@
 
 > **Fork note:** HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io). Changes merged from the upstream Tome repository are marked with `[upstream]` in this changelog.
 
+## [3.3.0] — 2026-04-19
+
+- **Status bar auto-record indicator.** A small white dot appears in the top-right corner of the menu bar icon when auto-meeting recording is enabled, giving a persistent at-a-glance reminder that the feature is active.
+- **Speaker naming: natural sort order.** Speakers in the post-session naming window now appear in numeric order (Speaker 1, 2, 3 … 10, 11) instead of lexicographic order (1, 10, 11, 2 …).
+- **Speaker naming: scrollable list.** When a recording has many speakers the naming window now scrolls, so all entries remain reachable regardless of how many speakers were detected.
+- **Partial diarization on early stop.** If a file import is stopped mid-way, diarization now processes only the audio that was actually transcribed — not the entire source file. The exported WAV is trimmed to the processed duration so diarizer timestamps align correctly with the transcript.
+
+## [3.2.0] — 2026-04-19
+
+- **Transcribe File.** New "Transcribe File" toolbar button (⌃F) opens a file picker accepting any audio or video format (M4A, MP4, MOV, MP3, WAV, …). The file is decoded to 16 kHz mono PCM and processed through the same VAD → ASR → diarization pipeline as a live Call Capture session. Speaker diarization and the speaker-naming prompt run automatically after the file finishes (or after the user stops early). Output is a standard `.md` transcript in the vault, with `type: fleeting` frontmatter.
+
 ## [3.1.1] — 2026-04-12
 
 - Updated app icons and logo.

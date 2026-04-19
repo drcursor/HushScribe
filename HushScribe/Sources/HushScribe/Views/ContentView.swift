@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 import Combine
 import CoreAudio
+import UniformTypeIdentifiers
 
 private let conferencingBundleIDs: [String: String] = [
     "com.microsoft.teams2": "Teams",
@@ -47,6 +48,7 @@ struct ContentView: View {
     @State private var speakerLabelsForNaming: [String] = []
     @State private var speakerPreviewsForNaming: [String: [String]] = [:]
     @State private var speakerNamingContinuation: CheckedContinuation<[String: String], Never>?
+    @State private var showFilePicker = false
 
     var body: some View {
         coreContent
@@ -102,6 +104,15 @@ struct ContentView: View {
         }
         .overlay { if showOnboarding { OnboardingView(isPresented: $showOnboarding, settings: settings).transition(.opacity) } }
         .overlay { if showSpeakerNaming { speakerNamingOverlay } }
+        .fileImporter(
+            isPresented: $showFilePicker,
+            allowedContentTypes: [.audio, .movie, .mpeg4Movie, .quickTimeMovie],
+            allowsMultipleSelection: false
+        ) { result in
+            if case .success(let urls) = result, let url = urls.first {
+                startFileSession(url: url)
+            }
+        }
         .onChange(of: showOnboarding) { if !showOnboarding { hasCompletedOnboarding = true } }
         .task {
             if !hasCompletedOnboarding {
@@ -291,6 +302,11 @@ struct ContentView: View {
                     openSettings()
                 }
             }
+            toolbarButton(icon: "arrow.up.doc", label: "Transcribe File") {
+                showFilePicker = true
+            }
+            .disabled(isRunning)
+            .opacity(isRunning ? 0.35 : 1)
             Spacer()
             if settings.mainWindowMode == .attached {
                 toolbarButton(
@@ -331,9 +347,11 @@ struct ContentView: View {
                     .font(.system(size: 13))
                 Text(label)
                     .font(.system(size: 9, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
             .foregroundStyle(Color.fg2)
-            .frame(width: 52, height: 38)
+            .frame(width: 72, height: 38)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -574,6 +592,8 @@ struct ContentView: View {
         case .voiceMemo:
             outputPath = settings.vaultVoicePath
             sourceApp = "Voice Memo"
+        case .fileImport:
+            return  // handled by startFileSession(url:)
         }
 
         Task {
@@ -611,6 +631,41 @@ struct ContentView: View {
         }
     }
 
+    private func startFileSession(url: URL) {
+        guard !isRunning else { return }
+        guard settings.hasAcknowledgedDisclaimer else {
+            transcriptionEngine.lastError = "Please complete the setup wizard and acknowledge the legal disclaimer before transcribing."
+            return
+        }
+        if settings.notificationSoundEnabled { NSSound(named: .init("Tink"))?.play() }
+        transcriptStore.clear()
+        silenceSeconds = 0
+        sessionElapsed = 0
+        savedFileURL = nil
+        bannerDismissTask?.cancel()
+        activeSessionType = .fileImport
+
+        Task {
+            transcriptionEngine.lastError = nil
+            await sessionStore.startSession()
+            do {
+                try await transcriptLogger.startSession(
+                    sourceApp: url.deletingPathExtension().lastPathComponent,
+                    vaultPath: settings.vaultVoicePath,
+                    sessionType: .fileImport
+                )
+            } catch {
+                await sessionStore.endSession()
+                activeSessionType = nil
+                transcriptionEngine.lastError = error.localizedDescription
+                return
+            }
+            recordingState.isRecording = true
+            recordingState.isPaused = false
+            await transcriptionEngine.startFileTranscription(url: url, locale: settings.locale)
+        }
+    }
+
     private func pauseFromMenu() {
         transcriptionEngine.pause()
         recordingState.isPaused = true
@@ -624,6 +679,7 @@ struct ContentView: View {
     private func stopSession() {
         if settings.notificationSoundEnabled { NSSound(named: .init("Tink"))?.play() }
         let wasCallCapture = activeSessionType == .callCapture
+        let wasFileImport = activeSessionType == .fileImport
         activeSessionType = nil
         detectedAppName = nil
         silenceSeconds = 0
@@ -635,13 +691,29 @@ struct ContentView: View {
             await sessionStore.endSession()
             await transcriptLogger.endSession()
 
-            if wasCallCapture {
+            if wasCallCapture || wasFileImport {
                 transcriptionEngine.assetStatus = "Identifying speakers..."
-                if let segments = await transcriptionEngine.runPostSessionDiarization() {
-                    transcriptionEngine.assetStatus = "Rewriting transcript..."
-                    let speakerMap = await transcriptLogger.rewriteWithDiarization(segments: segments)
+                let segments: [(speakerId: String, startTime: Float, endTime: Float)]?
+                if wasCallCapture {
+                    segments = await transcriptionEngine.runPostSessionDiarization()
+                } else {
+                    segments = await transcriptionEngine.runFileTranscriptionDiarization()
+                }
 
-                    let genericLabels = Set(speakerMap.values).sorted()
+                if let segments {
+                    transcriptionEngine.assetStatus = "Rewriting transcript..."
+                    let speakerMap: [String: String]
+                    if wasCallCapture {
+                        speakerMap = await transcriptLogger.rewriteWithDiarization(segments: segments)
+                    } else {
+                        speakerMap = await transcriptLogger.rewriteFileTranscriptWithDiarization(segments: segments)
+                    }
+
+                    let genericLabels = Set(speakerMap.values).sorted {
+                        let n0 = Int($0.components(separatedBy: " ").last ?? "") ?? 0
+                        let n1 = Int($1.components(separatedBy: " ").last ?? "") ?? 0
+                        return n0 < n1
+                    }
                     if !genericLabels.isEmpty {
                         transcriptionEngine.assetStatus = "Ready"
 

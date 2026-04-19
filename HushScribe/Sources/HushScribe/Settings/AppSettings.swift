@@ -26,6 +26,7 @@ enum SummaryPromptSelection: Equatable, Hashable {
 enum SessionType: String {
     case callCapture
     case voiceMemo
+    case fileImport
 }
 
 enum MainWindowMode: String, CaseIterable {

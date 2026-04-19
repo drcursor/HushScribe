@@ -46,15 +46,18 @@ final class StreamingTranscriber: @unchecked Sendable {
     private static let flushInterval = 96_000
 
     /// Main loop: reads audio buffers, runs VAD, transcribes speech segments.
+    /// - Parameter offsetTracker: optional tracker updated with total 16 kHz samples consumed,
+    ///   used during file transcription to compute file-relative utterance timestamps.
     /// Returns `true` if the loop exited due to fatal (repeated) errors.
     @discardableResult
-    func run(stream: AsyncStream<AVAudioPCMBuffer>) async -> Bool {
+    func run(stream: AsyncStream<AVAudioPCMBuffer>, offsetTracker: FileOffsetTracker? = nil) async -> Bool {
         var vadState = await vadManager.makeStreamState()
         var speechSamples: [Float] = []
         var vadBuffer: [Float] = []
         var isSpeaking = false
         var bufferCount = 0
         var consecutiveErrors = 0
+        var totalVADSamples = 0
 
         outerLoop: for await buffer in stream {
             bufferCount += 1
@@ -75,6 +78,8 @@ final class StreamingTranscriber: @unchecked Sendable {
             while vadBuffer.count >= Self.vadChunkSize {
                 let chunk = Array(vadBuffer.prefix(Self.vadChunkSize))
                 vadBuffer.removeFirst(Self.vadChunkSize)
+                totalVADSamples += Self.vadChunkSize
+                offsetTracker?.set(totalVADSamples)
 
                 do {
                     let result = try await vadManager.processStreamingChunk(

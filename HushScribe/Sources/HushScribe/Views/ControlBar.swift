@@ -170,6 +170,8 @@ struct ControlBar: View {
             return "Call Capture"
         case .voiceMemo:
             return "Voice Memo"
+        case .fileImport:
+            return "File Import"
         case nil:
             return "Recording"
         }

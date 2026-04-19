@@ -1,4 +1,4 @@
-import AVFoundation
+@preconcurrency import AVFoundation
 import CoreAudio
 import FluidAudio
 import Observation
@@ -24,6 +24,18 @@ enum ModelDownloadState {
     case needed
     case downloading
     case ready
+}
+
+/// Tracks the number of 16 kHz audio samples consumed by a StreamingTranscriber.
+/// Used during file transcription to compute file-relative utterance timestamps.
+final class FileOffsetTracker: @unchecked Sendable {
+    private var _samples: Int = 0
+    private let lock = NSLock()
+
+    /// Current audio position in seconds (samples / 16 000 Hz).
+    var seconds: Double { lock.withLock { Double(_samples) / 16_000.0 } }
+
+    func set(_ samples: Int) { lock.withLock { _samples = samples } }
 }
 
 /// Dual-stream mic + system audio transcription.
@@ -63,6 +75,11 @@ final class TranscriptionEngine {
 
     private var micTask: Task<Void, Never>?
     private var sysTask: Task<Void, Never>?
+    private var fileTask: Task<Void, Never>?
+    /// Source URL for the current file-transcription session (used by diarization).
+    private(set) var fileTranscriptionURL: URL?
+    /// Tracks 16 kHz samples consumed — lets diarization use only the processed portion on mid-stop.
+    private var fileOffsetTracker: FileOffsetTracker?
     /// Keeps the mic stream alive for the audio level meter when transcription isn't running.
     private var micKeepAliveTask: Task<Void, Never>?
 
@@ -735,15 +752,317 @@ final class TranscriptionEngine {
         removeDefaultDeviceListener()
         micTask?.cancel()
         sysTask?.cancel()
+        fileTask?.cancel()
         micKeepAliveTask?.cancel()
         micTask = nil
         sysTask = nil
+        fileTask = nil
         micKeepAliveTask = nil
+        // fileTranscriptionURL is NOT cleared here — runFileTranscriptionDiarization() reads it
+        // after stop() returns, then clears it (mirrors how systemCapture.cleanupBufferFile() works).
         await systemCapture.stop()
         micCapture.stop()
         currentMicDeviceID = 0
         isRunning = false
         assetStatus = "Ready"
+    }
+
+    // MARK: - File Transcription
+
+    /// Transcribe an audio or video file using the same VAD + ASR pipeline as live sessions.
+    /// Posts `.hushscribeStopRecording` when processing completes so ContentView can finalize the session.
+    func startFileTranscription(url: URL, locale: Locale) async {
+        guard !isRunning else { return }
+        lastError = nil
+        isRunning = true
+        isPaused = false
+
+        // Load ASR backend — same logic as start()
+        let asrBackend: any ASRBackend
+        if selectedModel.isWhisperKit {
+            if micVadManager == nil {
+                assetStatus = "Loading VAD model..."
+                do {
+                    micVadManager = try await VadManager()
+                } catch {
+                    lastError = "Failed to load VAD: \(error.localizedDescription)"
+                    assetStatus = "Ready"; isRunning = false; return
+                }
+            }
+            if let existing = whisperKitBackend {
+                asrBackend = existing
+            } else {
+                let modelID = selectedModel.whisperModelID!
+                assetStatus = "Downloading \(selectedModel.displayName)..."
+                do {
+                    let wk = try await WhisperKit(model: modelID)
+                    let backend = WhisperKitASRBackend(wk)
+                    whisperKitBackend = backend
+                    asrBackend = backend
+                } catch {
+                    lastError = "Failed to load WhisperKit: \(error.localizedDescription)"
+                    assetStatus = "Ready"; isRunning = false; return
+                }
+            }
+        } else if selectedModel.isAppleSpeech {
+            let authorized = await SFSpeechBackend.requestAuthorization()
+            guard authorized else {
+                lastError = "Speech recognition permission denied."
+                assetStatus = "Ready"; isRunning = false; return
+            }
+            if micVadManager == nil {
+                assetStatus = "Loading VAD model..."
+                do {
+                    micVadManager = try await VadManager()
+                } catch {
+                    lastError = "Failed to load VAD: \(error.localizedDescription)"
+                    assetStatus = "Ready"; isRunning = false; return
+                }
+            }
+            if let existing = sfSpeechBackend {
+                asrBackend = existing
+            } else {
+                do {
+                    let backend = try SFSpeechBackend(locale: locale)
+                    sfSpeechBackend = backend
+                    asrBackend = backend
+                } catch {
+                    lastError = "Failed to initialize Apple Speech: \(error.localizedDescription)"
+                    assetStatus = "Ready"; isRunning = false; return
+                }
+            }
+        } else {
+            // Parakeet
+            if asrManager == nil || micVadManager == nil {
+                guard modelDownloadState == .ready else {
+                    lastError = "Models not downloaded."
+                    assetStatus = "Ready"; isRunning = false; return
+                }
+                assetStatus = "Loading models..."
+                do {
+                    let models = try await AsrModels.downloadAndLoad(version: .v3)
+                    let asr = AsrManager(config: .default)
+                    try await asr.loadModels(models)
+                    asrManager = asr
+                    micVadManager = try await VadManager()
+                } catch {
+                    lastError = "Failed to load models: \(error.localizedDescription)"
+                    assetStatus = "Ready"; isRunning = false; return
+                }
+            }
+            guard let asr = asrManager else { isRunning = false; return }
+            asrBackend = FluidAudioASRBackend(manager: asr)
+        }
+
+        guard let vadManager = micVadManager else { isRunning = false; return }
+
+        fileTranscriptionURL = url   // cleared by runFileTranscriptionDiarization() after use
+        let sessionStart = Date()
+        let offsetTracker = FileOffsetTracker()
+        fileOffsetTracker = offsetTracker
+
+        let store = transcriptStore
+        let fileStream = fileAudioStream(from: url)
+
+        let transcriber = StreamingTranscriber(
+            asrBackend: asrBackend,
+            vadManager: vadManager,
+            speaker: .you,
+            audioSource: .microphone,
+            onSpeechStart: { [weak self] in
+                Task { @MainActor in self?.isSpeechDetected = true }
+            },
+            onPartial: { text in
+                Task { @MainActor in store.volatileYouText = text }
+            },
+            onFinal: { [weak self] text in
+                // Use file-relative offset so diarization timestamps align correctly.
+                let utteranceDate = sessionStart.addingTimeInterval(offsetTracker.seconds)
+                Task { @MainActor in
+                    store.volatileYouText = ""
+                    store.append(Utterance(text: text, speaker: .you, timestamp: utteranceDate))
+                    self?.isSpeechDetected = false
+                }
+            }
+        )
+
+        assetStatus = "Transcribing file (\(selectedModel.displayName))"
+        diagLog("[ENGINE] starting file transcription for \(url.lastPathComponent)")
+
+        fileTask = Task.detached { [weak self] in
+            _ = await transcriber.run(stream: fileStream, offsetTracker: offsetTracker)
+            Task { @MainActor [weak self] in self?.isSpeechDetected = false }
+            // Only auto-stop when the file finished naturally.
+            // If fileTask was cancelled (manual Stop), stopSession() already ran — don't call it again.
+            guard !Task.isCancelled else { return }
+            NotificationCenter.default.post(name: .hushscribeStopRecording, object: nil)
+        }
+    }
+
+    /// Run post-session diarization on the source file loaded by the user.
+    /// Exports audio to a temp WAV first so the diarizer always receives a format it can handle,
+    /// regardless of whether the source was an M4A, MP4, MOV, or other container.
+    /// Reads and then clears fileTranscriptionURL (mirrors cleanupBufferFile() for system audio).
+    nonisolated func runFileTranscriptionDiarization() async -> [(speakerId: String, startTime: Float, endTime: Float)]? {
+        let (url, processedSeconds): (URL?, Double) = await MainActor.run {
+            let u = fileTranscriptionURL
+            let s = fileOffsetTracker?.seconds ?? .infinity
+            fileTranscriptionURL = nil
+            fileOffsetTracker = nil
+            return (u, s)
+        }
+        guard let url else {
+            diagLog("[DIARIZE-FILE] No source URL stored")
+            return nil
+        }
+
+        diagLog("[DIARIZE-FILE] Exporting \(url.lastPathComponent) to temp WAV (limit: \(processedSeconds)s)...")
+        let wavURL: URL
+        do {
+            wavURL = try await exportAudioToWAV(url, maxDuration: processedSeconds)
+        } catch {
+            diagLog("[DIARIZE-FILE] WAV export failed: \(error.localizedDescription)")
+            return nil
+        }
+        defer { try? FileManager.default.removeItem(at: wavURL) }
+
+        diagLog("[DIARIZE-FILE] Starting diarization on WAV")
+        do {
+            let diarizer = OfflineDiarizerManager()
+            try await diarizer.prepareModels()
+            let result = try await diarizer.process(wavURL)
+            let segments = result.segments.map { seg in
+                (speakerId: seg.speakerId, startTime: seg.startTimeSeconds, endTime: seg.endTimeSeconds)
+            }
+            diagLog("[DIARIZE-FILE] Found \(segments.count) segments, \(Set(segments.map(\.speakerId)).count) speakers")
+            return segments
+        } catch {
+            diagLog("[DIARIZE-FILE] Failed: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    /// Decode any audio/video file to a temporary 16 kHz mono Float32 WAV for the diarizer.
+    /// - Parameter maxDuration: only export up to this many seconds (use `.infinity` for the full file).
+    private nonisolated func exportAudioToWAV(_ sourceURL: URL, maxDuration: Double = .infinity) async throws -> URL {
+        let asset = AVURLAsset(url: sourceURL)
+        guard let audioTrack = try? await asset.loadTracks(withMediaType: .audio).first else {
+            throw CocoaError(.fileReadUnknown)
+        }
+        guard let reader = try? AVAssetReader(asset: asset) else {
+            throw CocoaError(.fileReadUnknown)
+        }
+
+        // Limit the read range when only part of the file was processed
+        if maxDuration.isFinite && maxDuration > 0 {
+            reader.timeRange = CMTimeRange(
+                start: .zero,
+                duration: CMTime(seconds: maxDuration, preferredTimescale: 44100)
+            )
+        }
+
+        // Ask AVAssetReader to decode to 16 kHz mono Float32 non-interleaved PCM
+        let pcmFormat = AVAudioFormat(
+            commonFormat: .pcmFormatFloat32, sampleRate: 16000, channels: 1, interleaved: false
+        )!
+        let outputSettings: [String: Any] = [
+            AVFormatIDKey: Int(kAudioFormatLinearPCM),
+            AVSampleRateKey: 16_000.0,
+            AVNumberOfChannelsKey: 1,
+            AVLinearPCMBitDepthKey: 32,
+            AVLinearPCMIsFloatKey: true,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsNonInterleaved: true
+        ]
+        let trackOutput = AVAssetReaderTrackOutput(track: audioTrack, outputSettings: outputSettings)
+        trackOutput.alwaysCopiesSampleData = false
+        reader.add(trackOutput)
+        guard reader.startReading() else { throw CocoaError(.fileReadUnknown) }
+
+        let wavURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("hushscribe_diar_\(UUID().uuidString).wav")
+        guard let audioFile = try? AVAudioFile(forWriting: wavURL, settings: pcmFormat.settings) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+
+        while reader.status == .reading {
+            guard let sampleBuffer = trackOutput.copyNextSampleBuffer() else { break }
+            let frameCount = AVAudioFrameCount(sampleBuffer.numSamples)
+            guard frameCount > 0,
+                  let pcmBuffer = AVAudioPCMBuffer(pcmFormat: pcmFormat, frameCapacity: frameCount)
+            else { continue }
+            pcmBuffer.frameLength = frameCount
+            let status = CMSampleBufferCopyPCMDataIntoAudioBufferList(
+                sampleBuffer, at: 0, frameCount: Int32(frameCount), into: pcmBuffer.mutableAudioBufferList
+            )
+            guard status == noErr else { continue }
+            try? audioFile.write(from: pcmBuffer)
+        }
+
+        return wavURL
+    }
+
+    /// Creates an AsyncStream of PCM buffers by decoding an audio or video file via AVAssetReader.
+    private nonisolated func fileAudioStream(from url: URL) -> AsyncStream<AVAudioPCMBuffer> {
+        AsyncStream { continuation in
+            Task.detached {
+                let asset = AVURLAsset(url: url)
+                guard let audioTrack = try? await asset.loadTracks(withMediaType: .audio).first,
+                      let reader = try? AVAssetReader(asset: asset) else {
+                    continuation.finish()
+                    return
+                }
+
+                // Decode to mono Float32 at 44100 Hz; StreamingTranscriber resamples to 16 kHz
+                let outputSettings: [String: Any] = [
+                    AVFormatIDKey: Int(kAudioFormatLinearPCM),
+                    AVSampleRateKey: 44100.0,
+                    AVNumberOfChannelsKey: 1,
+                    AVLinearPCMBitDepthKey: 32,
+                    AVLinearPCMIsFloatKey: true,
+                    AVLinearPCMIsBigEndianKey: false,
+                    AVLinearPCMIsNonInterleaved: false
+                ]
+                let trackOutput = AVAssetReaderTrackOutput(track: audioTrack, outputSettings: outputSettings)
+                trackOutput.alwaysCopiesSampleData = false
+                reader.add(trackOutput)
+
+                guard reader.startReading() else { continuation.finish(); return }
+
+                let format = AVAudioFormat(
+                    commonFormat: .pcmFormatFloat32,
+                    sampleRate: 44100,
+                    channels: 1,
+                    interleaved: true
+                )!
+
+                while reader.status == .reading, !Task.isCancelled {
+                    guard let sampleBuffer = trackOutput.copyNextSampleBuffer() else { break }
+                    guard let blockBuffer = CMSampleBufferGetDataBuffer(sampleBuffer) else { continue }
+
+                    var totalLength = 0
+                    var dataPointer: UnsafeMutablePointer<Int8>?
+                    let result = CMBlockBufferGetDataPointer(
+                        blockBuffer, atOffset: 0,
+                        lengthAtOffsetOut: nil,
+                        totalLengthOut: &totalLength,
+                        dataPointerOut: &dataPointer
+                    )
+                    guard result == kCMBlockBufferNoErr, let src = dataPointer, totalLength > 0 else { continue }
+
+                    let frameCount = totalLength / 4  // Float32 = 4 bytes per sample
+                    guard frameCount > 0,
+                          let audioBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frameCount))
+                    else { continue }
+                    audioBuffer.frameLength = AVAudioFrameCount(frameCount)
+                    audioBuffer.mutableAudioBufferList.pointee.mBuffers.mData!
+                        .copyMemory(from: src, byteCount: totalLength)
+
+                    continuation.yield(audioBuffer)
+                }
+                continuation.finish()
+            }
+        }
     }
 
     /// Run offline diarization on the buffered system audio.

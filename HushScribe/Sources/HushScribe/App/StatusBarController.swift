@@ -6,6 +6,7 @@ import SwiftUI
 final class StatusBarController: NSObject, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
+    private var autoDetectDotView: NSView?
     private var closePopoverObserver: Any?
     private var openSettingsAction: (() -> Void)?
     private weak var mainWindow: NSWindow?
@@ -105,6 +106,31 @@ final class StatusBarController: NSObject, NSMenuDelegate {
                 name = "quote.bubble"
             }
             button.image = NSImage(systemSymbolName: name, accessibilityDescription: nil)
+        }
+
+        updateAutoDetectDot(on: button)
+    }
+
+    private func updateAutoDetectDot(on button: NSButton) {
+        if settings?.autoMeetingDetect == true {
+            if autoDetectDotView == nil {
+                let dotSize: CGFloat = 5
+                let dot = NSView(frame: NSRect(
+                    x: button.bounds.width - dotSize - 0.5,
+                    y: 0.5,
+                    width: dotSize,
+                    height: dotSize
+                ))
+                dot.wantsLayer = true
+                dot.layer?.backgroundColor = NSColor.white.cgColor
+                dot.layer?.cornerRadius = dotSize / 2
+                dot.autoresizingMask = [.minXMargin, .minYMargin]
+                button.addSubview(dot)
+                autoDetectDotView = dot
+            }
+        } else {
+            autoDetectDotView?.removeFromSuperview()
+            autoDetectDotView = nil
         }
     }
 
@@ -316,6 +342,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         withObservationTracking {
             _ = recordingState?.isRecording
             _ = recordingState?.isPaused
+            _ = settings?.autoMeetingDetect
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
                 self?.updateIcon()

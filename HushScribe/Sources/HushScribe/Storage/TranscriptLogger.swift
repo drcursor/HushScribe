@@ -52,11 +52,18 @@ actor TranscriptLogger {
         let dateStr = dateFmt.string(from: now)
         let timeStr = timeFmt.string(from: now)
 
-        let isVoiceMemo = sessionType == .voiceMemo
-        let fileLabel = isVoiceMemo ? "Voice Memo" : "Call Recording"
-        let noteType = isVoiceMemo ? "fleeting" : "meeting"
-        let logTag = isVoiceMemo ? "log/voice" : "log/meeting"
-        let sourceTag = isVoiceMemo ? "source/voice" : "source/meeting"
+        let fileLabel: String
+        let noteType: String
+        let logTag: String
+        let sourceTag: String
+        switch sessionType {
+        case .voiceMemo:
+            fileLabel = "Voice Memo"; noteType = "fleeting"; logTag = "log/voice"; sourceTag = "source/voice"
+        case .fileImport:
+            fileLabel = "File Import"; noteType = "fleeting"; logTag = "log/voice"; sourceTag = "source/file"
+        default:
+            fileLabel = "Call Recording"; noteType = "meeting"; logTag = "log/meeting"; sourceTag = "source/meeting"
+        }
 
         let filename = "\(fileFmt.string(from: now)) \(fileLabel).md"
         currentFilePath = directory.appendingPathComponent(filename)
@@ -380,6 +387,77 @@ tags:
         }
 
         // Atomic write
+        let tmpPath = filePath.deletingLastPathComponent().appendingPathComponent(".hushscribe_diar_tmp.md")
+        try? content.write(to: tmpPath, atomically: true, encoding: .utf8)
+        try? FileManager.default.removeItem(at: filePath)
+        try? FileManager.default.moveItem(at: tmpPath, to: filePath)
+
+        return diarSpeakerMap
+    }
+
+    /// Rewrite a file-import transcript where all utterances start as "You".
+    /// Utterance timestamps were set to sessionStart + fileOffsetSeconds, so they align with
+    /// the diarizer's file-relative segment timestamps.
+    /// Unlike rewriteWithDiarization, this replaces ALL speaker labels (not just "Them").
+    @discardableResult
+    func rewriteFileTranscriptWithDiarization(segments: [(speakerId: String, startTime: Float, endTime: Float)]) -> [String: String] {
+        guard let filePath = currentFilePath ?? lastSessionFilePath else { return [:] }
+        guard var content = try? String(contentsOf: filePath, encoding: .utf8) else { return [:] }
+
+        var diarSpeakerMap: [String: String] = [:]
+        var nextSpeakerNum = 1
+        for seg in segments {
+            if diarSpeakerMap[seg.speakerId] == nil {
+                diarSpeakerMap[seg.speakerId] = "Speaker \(nextSpeakerNum)"
+                nextSpeakerNum += 1
+            }
+        }
+
+        let timeFmt = DateFormatter()
+        timeFmt.dateFormat = "HH:mm:ss"
+
+        // Match any speaker header — file transcripts only have one stream so all are "You" initially
+        let pattern = #"\*\*[^*]+\*\* \((\d{2}:\d{2}:\d{2})\)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return diarSpeakerMap }
+
+        let nsContent = content as NSString
+        let matches = regex.matches(in: content, range: NSRange(location: 0, length: nsContent.length))
+
+        for match in matches.reversed() {
+            let timeRange = match.range(at: 1)
+            let timeStr = nsContent.substring(with: timeRange)
+
+            guard let sessionStart = sessionStartTime ?? lastSessionStartTime else { continue }
+            guard let uttDate = timeFmt.date(from: timeStr) else { continue }
+
+            let cal = Calendar.current
+            let startComps = cal.dateComponents([.hour, .minute, .second], from: sessionStart)
+            let uttComps  = cal.dateComponents([.hour, .minute, .second], from: uttDate)
+            let startSec = (startComps.hour ?? 0) * 3600 + (startComps.minute ?? 0) * 60 + (startComps.second ?? 0)
+            let uttSec   = (uttComps.hour  ?? 0) * 3600 + (uttComps.minute  ?? 0) * 60 + (uttComps.second  ?? 0)
+            let offset   = Float(uttSec - startSec)
+
+            var bestMatch: String?
+            for seg in segments where offset >= seg.startTime && offset <= seg.endTime {
+                bestMatch = diarSpeakerMap[seg.speakerId]; break
+            }
+            if bestMatch == nil {
+                var minDist: Float = .infinity
+                for seg in segments {
+                    let dist = abs(offset - (seg.startTime + seg.endTime) / 2)
+                    if dist < minDist && dist < 10 { minDist = dist; bestMatch = diarSpeakerMap[seg.speakerId] }
+                }
+            }
+
+            if let label = bestMatch {
+                content = (content as NSString).replacingCharacters(in: match.range(at: 0), with: "**\(label)** (\(timeStr))")
+            }
+        }
+
+        if let range = content.range(of: #"\*\*Speakers:\*\* \d+"#, options: .regularExpression) {
+            content.replaceSubrange(range, with: "**Speakers:** \(diarSpeakerMap.values.count)")
+        }
+
         let tmpPath = filePath.deletingLastPathComponent().appendingPathComponent(".hushscribe_diar_tmp.md")
         try? content.write(to: tmpPath, atomically: true, encoding: .utf8)
         try? FileManager.default.removeItem(at: filePath)

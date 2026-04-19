@@ -55,10 +55,11 @@ speak → capture → md transcription → optional summary → knowledge base
 
 - **Multilingual transcription** via Parakeet-TDT v3 ([FluidAudio](https://github.com/FluidInference/FluidAudio)) — 25 European languages, auto-detected, runs on Apple Silicon ANE.
 - **Multiple transcription models.** Choose between Parakeet-TDT v3 (default, fastest), WhisperKit Base, WhisperKit Large v3, or Apple Speech (built-in, no download required). All run entirely on-device.
-- **Auto-record meetings.** Enable from the menu bar — recording starts automatically when a meeting app (Zoom, Teams, Slack, FaceTime, Webex, Discord, Google Meet, Loom) is running and the microphone is actively in use. Stops automatically when the call ends; configurable stop delay in Settings. Note: browser-based meetings (e.g. Google Meet in a browser) are not detected.
+- **Auto-record meetings.** Enable from the menu bar — recording starts automatically when a meeting app (Zoom, Teams, Slack, FaceTime, Webex, Discord, Google Meet, Loom) is running and the microphone is actively in use. Stops automatically when the call ends; configurable stop delay in Settings. A white dot appears on the menu bar icon when the feature is active. Note: browser-based meetings (e.g. Google Meet in a browser) are not detected.
 - **Call Capture** grabs mic + system audio. Detects which conferencing app you're in (Teams, Zoom, Slack, etc.) and filters audio to just that app.
 - **Voice Memo** is mic-only. Saves to a separate folder so it doesn't clutter your meeting transcripts.
 - **On-device AI summary.** Open any transcript in the Transcript Viewer and click "Generate Summary" to get Highlights and To-Dos. Choose from Qwen3 0.6B, Gemma 3 1B (downloadable), or the built-in Apple NaturalLanguage model. All run entirely on-device — no API key, no network. Supports custom system prompts.
+- **Transcribe File.** Load any audio or video file (M4A, MP4, MOV, MP3, WAV, …) for offline transcription. The file runs through the same VAD → ASR → diarization pipeline as a live session; a speaker-naming prompt appears at the end.
 - **Speaker diarization** runs after the call ends. Splits remote audio into labelled speakers; post-session prompt lets you assign real names.
 - **Split VU meters.** Separate level meters for microphone and system audio, each with an independent mute toggle.
 - **Obsidian Vault-native compatible.** Writes `.md` with frontmatter: `type`, `created`, `attendees`, `tags`, `source_app`.
@@ -73,6 +74,15 @@ speak → capture → md transcription → optional summary → knowledge base
 - No audio is saved to disk. Only text transcripts.
 - The app window is hidden from screen sharing by default.
 - Transcripts are saved as plain `.md` files to a folder you choose.
+
+## Comparison
+
+| Feature | Granola | OpenOats | HushScribe |
+|---|---|---|---|
+| **Primary Goal** | Automated, structured notes | Real-time assistance / Retrieval | Private, local transcription |
+| **Data Processing** | Cloud-based (AI processing) | Hybrid | 100% Local / Offline |
+| **Integrations** | Slack, HubSpot, Notion, etc. | Local folders / Markdown | Local Markdown files |
+| **Platform** | Windows, macOS, iOS | macOS | macOS |
 
 ## Known Limitations and Issues
 
@@ -142,7 +152,6 @@ macOS re-prompts for Screen Recording permission roughly monthly. That's an OS t
 ## Architecture
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture overview and source tree.
-
 
 ## Credits
 

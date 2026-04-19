@@ -36,7 +36,8 @@ struct SpeakerNamingView: View {
             .padding(.bottom, 20)
 
             // Speaker fields
-            VStack(spacing: 8) {
+            ScrollView {
+              VStack(spacing: 8) {
                 // "You" row — non-editable, shown for context
                 HStack(spacing: 10) {
                     Circle()
@@ -100,6 +101,7 @@ struct SpeakerNamingView: View {
                     }
                     .padding(.horizontal, 12)
                 }
+              }
             }
 
             Spacer()
@@ -146,8 +148,7 @@ struct SpeakerNamingView: View {
     }
 
     private func speakerInitial(_ label: String) -> String {
-        // "Speaker 2" -> "2", "Speaker 3" -> "3"
-        String(label.last ?? "?")
+        label.components(separatedBy: " ").last ?? "?"
     }
 
     private func applyNames() {
