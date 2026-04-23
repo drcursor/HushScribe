@@ -2,6 +2,13 @@
 
 > **Fork note:** HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io). Changes merged from the upstream Tome repository are marked with `[upstream]` in this changelog.
 
+## [3.4.0] — 2026-04-23
+
+- **Gemma 4 E4B summary model.** Gemma 4 E4B (4-bit quantized, instruction-tuned) is now available as an AI summary model alongside Qwen3 and Gemma 3. Download it in Settings → Models. Runs entirely on-device on Apple Silicon.
+- **mlx-swift-lm updated** to latest version, adding Gemma 4 architecture support.
+- **AI Summary model label.** The summary band header now shows the name of the model that generated the summary (e.g. "AI Summary · Qwen3 0.6B") instead of the generic "AI Summary".
+- **Show Models in Finder.** Settings → Models now has "Show Models in Finder" buttons: one for AI summary models (`~/Library/Caches/models/`), and two for transcription models — Parakeet/FluidAudio (`~/Library/Application Support/FluidAudio/Models/`) and WhisperKit (`~/Documents/huggingface/models/…`).
+
 ## [3.3.0] — 2026-04-19
 
 - **Status bar auto-record indicator.** A small white dot appears in the top-right corner of the menu bar icon when auto-meeting recording is enabled, giving a persistent at-a-glance reminder that the feature is active.

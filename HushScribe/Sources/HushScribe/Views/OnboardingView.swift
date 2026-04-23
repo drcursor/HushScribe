@@ -32,7 +32,7 @@ struct OnboardingView: View {
         (
             "sparkles",
             "AI Summaries",
-            "After a session, open the Transcript Viewer and click \"Generate Summary\" to get highlights and action items from your transcript. All models run on-device — no internet required. Download Qwen3 or Gemma 3 in Settings → Models for best results."
+            "After a session, open the Transcript Viewer and click \"Generate Summary\" to get highlights and action items from your transcript. All models run on-device — no internet required. Download Qwen3, Gemma 3, or Gemma 4 in Settings → Models for best results."
         ),
         (
             "lock.shield",

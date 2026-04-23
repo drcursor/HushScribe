@@ -21,7 +21,7 @@
 
 HushScribe is a macOS menu bar app that captures meetings and voice memos, transcribes them on-device, and writes structured `.md` files to a folder of your choice (eg. your Obsidian vault).
 
-Every step runs locally. Transcription uses on-device models (Parakeet-TDT v3, WhisperKit, or Apple Speech). AI summaries are generated on-device via Qwen3, Gemma 3, or Apple's NaturalLanguage framework. 
+Every step runs locally. Transcription uses on-device models (Parakeet-TDT v3, WhisperKit, or Apple Speech). AI summaries are generated on-device via Qwen3, Gemma 3, Gemma 4, or Apple's NaturalLanguage framework.
 
 *No audio, no transcripts, and no data of any kind is ever sent to the internet.*
 
@@ -43,7 +43,7 @@ brew install --cask hushscribe
 
 ## Why HushScribe?
 
-- **Entirely local.** Transcription and AI summary both run on-device — Parakeet, WhisperKit, Apple Speech, Qwen3, Gemma 3, and Apple's NaturalLanguage framework. Nothing ever leaves your computer.
+- **Entirely local.** Transcription and AI summary both run on-device — Parakeet, WhisperKit, Apple Speech, Qwen3, Gemma 3, Gemma 4, and Apple's NaturalLanguage framework. Nothing ever leaves your computer.
 - **Your data, your files.** Output is plain `.md` with YAML frontmatter, timestamps, and speaker labels. No proprietary export, no lock-in, no copy-paste.
 - **No accounts, no subscriptions, no API keys, no additional background services** Download and run.
 
@@ -58,7 +58,7 @@ speak → capture → md transcription → optional summary → knowledge base
 - **Auto-record meetings.** Enable from the menu bar — recording starts automatically when a meeting app (Zoom, Teams, Slack, FaceTime, Webex, Discord, Google Meet, Loom) is running and the microphone is actively in use. Stops automatically when the call ends; configurable stop delay in Settings. A white dot appears on the menu bar icon when the feature is active. Note: browser-based meetings (e.g. Google Meet in a browser) are not detected.
 - **Call Capture** grabs mic + system audio. Detects which conferencing app you're in (Teams, Zoom, Slack, etc.) and filters audio to just that app.
 - **Voice Memo** is mic-only. Saves to a separate folder so it doesn't clutter your meeting transcripts.
-- **On-device AI summary.** Open any transcript in the Transcript Viewer and click "Generate Summary" to get Highlights and To-Dos. Choose from Qwen3 0.6B, Gemma 3 1B (downloadable), or the built-in Apple NaturalLanguage model. All run entirely on-device — no API key, no network. Supports custom system prompts.
+- **On-device AI summary.** Open any transcript in the Transcript Viewer and click "Generate Summary" to get Highlights and To-Dos. Choose from Qwen3 0.6B, Gemma 3 1B, Gemma 4 E4B (all downloadable), or the built-in Apple NaturalLanguage model. All run entirely on-device — no API key, no network. Supports custom system prompts.
 - **Transcribe File.** Load any audio or video file (M4A, MP4, MOV, MP3, WAV, …) for offline transcription. The file runs through the same VAD → ASR → diarization pipeline as a live session; a speaker-naming prompt appears at the end.
 - **Speaker diarization** runs after the call ends. Splits remote audio into labelled speakers; post-session prompt lets you assign real names.
 - **Split VU meters.** Separate level meters for microphone and system audio, each with an independent mute toggle.
@@ -69,7 +69,7 @@ speak → capture → md transcription → optional summary → knowledge base
 ## Privacy
 
 - All transcription models run entirely on-device. No audio is ever sent anywhere.
-- AI summaries are generated on-device (Qwen3, Gemma 3, or Apple NL). No external API, no network.
+- AI summaries are generated on-device (Qwen3, Gemma 3, Gemma 4, or Apple NL). No external API, no network.
 - No network calls. No analytics. No telemetry.
 - No audio is saved to disk. Only text transcripts.
 - The app window is hidden from screen sharing by default.
@@ -94,7 +94,6 @@ speak → capture → md transcription → optional summary → knowledge base
 - **Microphone input may stop working.** If no audio is captured, switching to a specific input device in Settings → Recording (instead of "System Default") usually resolves it. Additonally you can triple click the App's logo to reset the recording process.
 - **Local sound input sometimes fails.** System audio capture may silently stop capturing. Changing the input device and restarting the recording session fixes it.
 - **Auto-record meetings detction only for Applications** Browser-based meetings (e.g. Google Meet in a browser) are not detected.
-- **Gemma 4  models not supoorted yet** Waiting for https://github.com/ml-explore/mlx-swift-lm/issues/177
 
 ## Output
 
@@ -163,7 +162,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full architecture overview and so
 - [WhisperKit](https://github.com/argmaxinc/WhisperKit) by Argmax — on-device Whisper inference on Apple Silicon, used for the Whisper Base and Whisper Large v3 model options. Whisper was originally developed by [OpenAI](https://github.com/openai/whisper).
 - [mlx-swift-lm](https://github.com/ml-explore/mlx-swift-lm) and [mlx-swift](https://github.com/ml-explore/mlx-swift) by Apple — MLX inference stack for Swift, used to run LLM summary models on Apple Silicon.
 - [Qwen3](https://huggingface.co/Qwen) by Alibaba Cloud — default on-device LLM used for AI summaries.
-- [Gemma 3](https://ai.google.dev/gemma) by Google — alternative on-device LLM for AI summaries.
+- [Gemma 3 / Gemma 4](https://ai.google.dev/gemma) by Google — alternative on-device LLMs for AI summaries.
 - [pyannote.audio](https://github.com/pyannote/pyannote-audio) — speaker diarization model used for post-session speaker separation.
 
 ## Changelog

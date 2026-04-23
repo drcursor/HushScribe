@@ -245,6 +245,27 @@ private struct TranscriptionModelsSubTab: View {
                     .textCase(nil)
                     .padding(.bottom, 2)
             }
+
+            Section {
+                Button {
+                    let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+                        .appendingPathComponent("FluidAudio/Models")
+                    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+                    NSWorkspace.shared.open(dir)
+                } label: {
+                    Label("Show Parakeet Models in Finder", systemImage: "folder")
+                        .font(.system(size: 12))
+                }
+                Button {
+                    let dir = FileManager.default.homeDirectoryForCurrentUser
+                        .appendingPathComponent("Documents/huggingface/models/argmaxinc/whisperkit-coreml")
+                    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+                    NSWorkspace.shared.open(dir)
+                } label: {
+                    Label("Show WhisperKit Models in Finder", systemImage: "folder")
+                        .font(.system(size: 12))
+                }
+            }
         }
         .formStyle(.grouped)
     }
@@ -268,6 +289,18 @@ private struct SummaryModelsSubTab: View {
                     .padding(.bottom, 2)
             }
 
+            Section {
+                Button {
+                    let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+                        .appendingPathComponent("models")
+                    try? FileManager.default.createDirectory(at: cacheDir, withIntermediateDirectories: true)
+                    NSWorkspace.shared.open(cacheDir)
+                } label: {
+                    Label("Show Models in Finder", systemImage: "folder")
+                        .font(.system(size: 12))
+                }
+            }
+
             // Apple NL warning
             if settings.summaryModel.isBuiltIn {
                 Section {
@@ -275,7 +308,7 @@ private struct SummaryModelsSubTab: View {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
                             .font(.system(size: 13))
-                        Text("Apple NL produces keyword-based output and is usually not satisfactory. Download and use Qwen3 or Gemma 3 for better results.")
+                        Text("Apple NL produces keyword-based output and is usually not satisfactory. Download and use Qwen3, Gemma 3, or Gemma 4 for better results.")
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -782,10 +815,10 @@ private struct AboutSettingsTab: View {
                         description: "Default on-device LLM for AI summaries."
                     )
                     CreditRow(
-                        name: "Gemma 3",
+                        name: "Gemma 3 / Gemma 4",
                         url: "https://ai.google.dev/gemma",
                         author: "Google",
-                        description: "Alternative on-device LLM for AI summaries."
+                        description: "Alternative on-device LLMs for AI summaries."
                     )
                     CreditRow(
                         name: "pyannote.audio",

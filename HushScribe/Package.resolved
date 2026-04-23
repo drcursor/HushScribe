@@ -1,5 +1,5 @@
 {
-  "originHash" : "374d5c71a84014653570bf081a5d96cdc55da1fbcd118e0f841618e436e5745d",
+  "originHash" : "069f39b2f225bc23652b0af65beb1573da7be7f323f7b4a750740ff37778a95c",
   "pins" : [
     {
       "identity" : "fluidaudio",
@@ -14,8 +14,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ml-explore/mlx-swift",
       "state" : {
-        "revision" : "6ba4827fb82c97d012eec9ab4b2de21f85c3b33d",
-        "version" : "0.30.6"
+        "revision" : "61b9e011e09a62b489f6bd647958f1555bdf2896",
+        "version" : "0.31.3"
       }
     },
     {
@@ -23,7 +23,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ml-explore/mlx-swift-lm",
       "state" : {
-        "revision" : "a7be75801b4259d0c7d511c20b2310cdf79108b8"
+        "revision" : "7e2b7107be52ffbfe488f3c7987d3f52c1858b4b"
       }
     },
     {
@@ -78,6 +78,15 @@
       "state" : {
         "revision" : "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
         "version" : "1.1.1"
+      }
+    },
+    {
+      "identity" : "swift-syntax",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-syntax.git",
+      "state" : {
+        "revision" : "9de99a78f099e59caf2b2beec65a4c45d54b2081",
+        "version" : "603.0.1"
       }
     },
     {

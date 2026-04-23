@@ -9,6 +9,7 @@ struct SummarizeView: View {
     @State private var transcriptText = ""
     @State private var parsedUtterances: [ParsedUtterance] = []
     @State private var summary: String? = nil
+    @State private var summaryGeneratedBy: SummaryModel? = nil
     @State private var thinkingContent: String? = nil
     @State private var showThinking = false
     @State private var isGenerating = false
@@ -41,7 +42,7 @@ struct SummarizeView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "sparkles")
                             .font(.system(size: 9, weight: .semibold))
-                        Text("AI Summary")
+                        Text(summaryGeneratedBy.map { "AI Summary · \($0.displayName)" } ?? "AI Summary")
                             .font(.system(size: 10, weight: .semibold))
                             .textCase(.uppercase)
                             .tracking(0.6)
@@ -159,7 +160,7 @@ struct SummarizeView: View {
                     HStack(spacing: 5) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
-                        Text("Results are usually not satisfactory. Use Qwen3 or Gemma 3.")
+                        Text("Results are usually not satisfactory. Use Qwen3, Gemma 3, or Gemma 4.")
                             .foregroundStyle(.secondary)
                     }
                     .font(.system(size: 11))
@@ -328,6 +329,7 @@ struct SummarizeView: View {
         transcriptText = ""
         parsedUtterances = []
         summary = nil
+        summaryGeneratedBy = nil
         savedConfirmation = false
         loadTranscript(from: url)
         NSApp.keyWindow?.title = "Transcript Viewer — \(url.deletingPathExtension().lastPathComponent)"
@@ -351,6 +353,7 @@ struct SummarizeView: View {
         savedFilename = ""
         summaryRendered = true
         thinkingContent = nil
+        summaryGeneratedBy = nil
         let text = transcriptText
         let chosenModel = settings.summaryModel
         let llm = LLMSummaryEngine.shared
@@ -366,6 +369,7 @@ struct SummarizeView: View {
             if chosenModel.isBuiltIn {
                 let result = await Task.detached { SummaryService.summarize(transcript: text) }.value
                 summary = result
+                summaryGeneratedBy = chosenModel
                 isGenerating = false
             } else {
                 do {
@@ -379,6 +383,7 @@ struct SummarizeView: View {
                         attempts += 1
                     }
                     summary = output.summary
+                    summaryGeneratedBy = chosenModel
                     thinkingContent = output.thinking
                 } catch {
                     summary = "Summary generation failed: \(error.localizedDescription)"
