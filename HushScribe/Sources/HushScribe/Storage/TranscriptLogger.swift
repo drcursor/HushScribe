@@ -526,18 +526,19 @@ tags:
     /// Write the summary to a separate file alongside the transcript.
     /// Returns the URL of the created summary file, or nil on failure.
     @discardableResult
-    func writeSummaryFile(_ summary: String, for transcriptURL: URL) -> URL? {
+    func writeSummaryFile(_ summary: String, for transcriptURL: URL, model: String? = nil) -> URL? {
         let dir = transcriptURL.deletingLastPathComponent()
         let baseName = transcriptURL.deletingPathExtension().lastPathComponent
         let summaryURL = dir.appendingPathComponent("\(baseName) summary.md")
 
         let dateFmt = ISO8601DateFormatter()
+        let modelLine = model.map { "model: \"\($0)\"\n" } ?? ""
         let content = """
         ---
         type: summary
         source: "\(transcriptURL.lastPathComponent)"
         created: "\(dateFmt.string(from: Date()))"
-        ---
+        \(modelLine)---
 
         # Summary
 

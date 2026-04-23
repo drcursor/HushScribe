@@ -2,6 +2,16 @@
 
 > **Fork note:** HushScribe is a fork of [Tome](https://github.com/Gremble-io/Tome) by [Gremble-io](https://github.com/Gremble-io). Changes merged from the upstream Tome repository are marked with `[upstream]` in this changelog.
 
+## [3.5.0] — 2026-04-23
+
+- **Transcript Viewer redesign.** The viewer now has a collapsible **Browse** sidebar (resizable by dragging the divider) for navigating saved transcripts. Transcripts with a saved summary show a sparkle badge. The toolbar has a single row: Browse toggle, Export, model picker, and Generate Summary.
+- **Export as Markdown.** New export option alongside SRT and JSON. Produces a `# Title` header with `**Speaker** \`time\`` blocks.
+- **Auto-load saved summary.** When opening a transcript, the corresponding `{name} summary.md` is loaded automatically if it exists — the summary tab appears without regenerating.
+- **Model name in summary tab.** The tab shows "AI Summary · Qwen3 0.6B" (or whichever model was used) once generation completes.
+- **Model name saved in summary file.** The `model:` field is written to the frontmatter of saved `.md` summary files.
+- **Custom prompts as Generate menu.** When custom prompts are defined in Settings, the Generate Summary button becomes a drop menu listing "Default Summary" and each named custom prompt. The separate prompt picker dropdown has been removed from the toolbar.
+- **Default model in Settings.** The "Use" button in Settings → Models → AI Summaries is now labelled "Default" and the active model shows a "Default" badge.
+
 ## [3.4.0] — 2026-04-23
 
 - **Gemma 4 E4B summary model.** Gemma 4 E4B (4-bit quantized, instruction-tuned) is now available as an AI summary model alongside Qwen3 and Gemma 3. Download it in Settings → Models. Runs entirely on-device on Apple Silicon.

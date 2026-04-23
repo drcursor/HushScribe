@@ -572,7 +572,7 @@ private struct SummaryModelRow: View {
                         Text(model.displayName)
                             .font(.system(size: 13, weight: .medium))
                         if isActive {
-                            Text("Active")
+                            Text("Default")
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundStyle(Color.accentColor)
                                 .padding(.horizontal, 6)
@@ -638,7 +638,7 @@ private struct SummaryModelRow: View {
     }
 
     private var useButton: some View {
-        Button("Use") {
+        Button("Default") {
             settings.summaryModel = model
         }
         .font(.system(size: 11, weight: .semibold))
