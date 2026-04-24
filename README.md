@@ -76,6 +76,28 @@ speak → capture → md transcription → optional summary → knowledge base
 - The app window is hidden from screen sharing by default.
 - Transcripts are saved as plain `.md` files to a folder you choose.
 
+## Models
+
+### Transcription
+
+| Model | Engine | Size |
+|-------|--------|------|
+| **[Parakeet-TDT v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2)** *(default)* | [FluidAudio](https://github.com/FluidInference/FluidAudio) | ~600 MB |
+| **[Whisper Base](https://huggingface.co/openai/whisper-base)** | [WhisperKit](https://github.com/argmaxinc/WhisperKit) | ~150 MB |
+| **[Whisper Large v3](https://huggingface.co/openai/whisper-large-v3)** | [WhisperKit](https://github.com/argmaxinc/WhisperKit) | ~1.5 GB |
+| **[Apple Speech](https://developer.apple.com/documentation/speech)** | macOS built-in | Built-in |
+
+### AI Summary
+
+| Model | Provider | Size |
+|-------|----------|------|
+| **[Apple NL](https://developer.apple.com/documentation/naturallanguage)** *(default)* | macOS built-in | Built-in |
+| **[Qwen3 0.6B](https://huggingface.co/mlx-community/Qwen3-0.6B-4bit)** | [Alibaba Cloud](https://qwenlm.github.io) | ~500 MB |
+| **[Gemma 3 1B](https://huggingface.co/mlx-community/gemma-3-1b-it-qat-4bit)** | [Google](https://ai.google.dev/gemma) | ~600 MB |
+| **[Gemma 4 E4B](https://huggingface.co/mlx-community/gemma-4-e4b-it-4bit)** | [Google](https://ai.google.dev/gemma) | ~800 MB |
+
+All models run entirely on-device via Apple Silicon. No API key, no network.
+
 ## Comparison
 
 | Feature | Granola | OpenOats | HushScribe |
