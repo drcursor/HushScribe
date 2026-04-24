@@ -66,24 +66,83 @@ HushScribe/Sources/HushScribe/
 - `TranscriptLogger` writes the `.md` file on session stop. Post-session diarization runs via `OfflineDiarizerManager` (FluidAudio) and re-labels system audio speakers.
 - `LLMSummaryEngine` loads MLX models on demand (cached in `~/Library/Caches/models/`). `SummarizeView` calls it with the transcript text and receives `(summary, thinking)`.
 
+## Scripts
+
+All scripts live in `scripts/` and are run from the **repository root**.
+
+### `scripts/bump_version.sh`
+
+Bumps `CFBundleShortVersionString` and `CFBundleVersion` in `HushScribe/Sources/HushScribe/Info.plist`.
+
+```bash
+scripts/bump_version.sh patch    # 3.5.0 → 3.5.1
+scripts/bump_version.sh minor    # 3.5.0 → 3.6.0
+scripts/bump_version.sh major    # 3.5.0 → 4.0.0
+scripts/bump_version.sh 3.5.2    # explicit version
+```
+
+### `scripts/release.sh`
+
+Full release pipeline. Requires a valid Developer ID certificate and a stored `notarytool` keychain profile named `HushScribe`.
+
+Steps:
+1. `swift build -c release` inside `HushScribe/`
+2. Compile MLX Metal shaders into `mlx.metallib`
+3. Assemble `dist/HushScribe.app` (binary, metallib, icon, logo, Info.plist)
+4. Deep-sign all dylibs, frameworks, and the bundle with hardened runtime
+5. Create and sign `dist/HushScribe.dmg`
+6. Notarize and staple (skipped with the `test` argument)
+7. Create GitHub release; body pulled from the matching `CHANGELOG.md` entry
+8. Update `Casks/hushscribe.rb` with the new version and SHA-256, then `git push`
+
+**Local test run** (skips notarization and GitHub release):
+```bash
+scripts/release.sh test
+```
+
+To rebuild and relaunch without resetting preferences:
+```bash
+rm dist/HushScribe.app/Contents/MacOS/HushScribe
+scripts/release.sh test
+dist/HushScribe.app/Contents/MacOS/HushScribe
+```
+
+To also reset all stored preferences:
+```bash
+defaults delete com.drcursor.hushscribe
+```
+
+### `scripts/test.sh`
+
+Convenience one-liner used during development: rebuilds the release binary, wipes preferences, and relaunches the app from `dist/`. Not a test suite.
+
 ## Build
 
 **Requirements:** Apple Silicon Mac, macOS 26+, Xcode 26.3+
 
+**Release build** — produces a signed, notarized `dist/HushScribe.dmg` and creates a GitHub release:
 ```bash
 git clone git@github.com:drcursor/HushScribe.git
 cd HushScribe
-./scripts/release.sh test
+scripts/release.sh
 ```
 
-Builds, signs, and packages to `dist/HushScribe.dmg`. First launch downloads the Parakeet ASR model (~600 MB, cached after that). LLM summary models are downloaded separately in Settings → Models.
-
-**Dev build:**
-
+**Local test build** — builds and packages without notarizing or publishing:
 ```bash
-cd HushScribe
-swift build
+scripts/release.sh test
 ```
+
+**Dev build** — fast iteration, no packaging:
+```bash
+cd HushScribe && swift build
+```
+
+**Bump version before releasing:**
+```bash
+scripts/bump_version.sh minor   # or patch / major / x.y.z
+```
+
+First launch downloads the Parakeet ASR model (~600 MB, cached after that). LLM summary models are downloaded separately in Settings → Models.
 
 ## Dependencies
 
