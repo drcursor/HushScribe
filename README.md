@@ -36,6 +36,7 @@ Every step runs locally. Transcription uses on-device models (Parakeet-TDT v3, W
 
 ```bash
 brew tap drcursor/hushscribe https://github.com/drcursor/HushScribe
+brew trust --cask drcursor/hushscribe/hushscribe
 brew install --cask hushscribe
 ```
 
