@@ -3,8 +3,18 @@
 import CoreMedia
 import os
 
+private let captureLog = Logger(subsystem: Bundle.main.bundleIdentifier ?? "HushScribe", category: "SystemAudioCapture")
+
 final class SystemAudioCapture: NSObject, @unchecked Sendable, SCStreamDelegate, SCStreamOutput {
     private let _stream = OSAllocatedUnfairLock<SCStream?>(uncheckedState: nil)
+    private let _onStreamStopped = OSAllocatedUnfairLock<(@Sendable (String) -> Void)?>(uncheckedState: nil)
+
+    /// Called when the SCStream dies mid-session (not on a deliberate `stop()`),
+    /// so the owner can surface the loss instead of silently continuing mic-only.
+    var onStreamStopped: (@Sendable (String) -> Void)? {
+        get { _onStreamStopped.withLock { $0 } }
+        set { _onStreamStopped.withLock { $0 = newValue } }
+    }
     private let _sysContinuation = OSAllocatedUnfairLock<AsyncStream<AVAudioPCMBuffer>.Continuation?>(uncheckedState: nil)
     private let _micContinuation = OSAllocatedUnfairLock<AsyncStream<AVAudioPCMBuffer>.Continuation?>(uncheckedState: nil)
     private let _audioLevel = AudioLevel()
@@ -87,6 +97,9 @@ final class SystemAudioCapture: NSObject, @unchecked Sendable, SCStreamDelegate,
     }
 
     func stop() async {
+        // Deliberate stop: clear the death callback first so the SCStream teardown
+        // is not reported as a mid-session failure.
+        _onStreamStopped.withLock { $0 = nil }
         try? await _stream.withLock { $0 }?.stopCapture()
         _stream.withLock { $0 = nil }
         _sysContinuation.withLock { $0?.finish(); $0 = nil }
@@ -155,7 +168,12 @@ final class SystemAudioCapture: NSObject, @unchecked Sendable, SCStreamDelegate,
     // MARK: - SCStreamDelegate
 
     nonisolated func stream(_ stream: SCStream, didStopWithError error: any Error) {
-        print("SystemAudioCapture: stream stopped with error: \(error)")
+        // This fires when macOS kills the stream mid-session (TCC revocation, display
+        // reconfiguration, SCK internal failure). Without loud handling the session
+        // silently degrades to mic-only and an hour-long call loses the entire
+        // system channel with no visible signal.
+        captureLog.error("stream stopped with error: \(error.localizedDescription, privacy: .public)")
+        _onStreamStopped.withLock { $0 }?(error.localizedDescription)
         _sysContinuation.withLock { $0?.finish(); $0 = nil }
     }
 

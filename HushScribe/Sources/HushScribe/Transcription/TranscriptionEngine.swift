@@ -5,6 +5,8 @@ import Observation
 import WhisperKit
 import os
 
+let engineLog = Logger(subsystem: Bundle.main.bundleIdentifier ?? "HushScribe", category: "TranscriptionEngine")
+
 // Writes to /tmp/hushscribe.log
 func diagLog(_ msg: String) {
     #if DEBUG
@@ -401,6 +403,14 @@ final class TranscriptionEngine {
         // 3. Start system audio capture
         captureAppBundleID = appBundleID
         diagLog("[ENGINE-4] starting system audio capture...")
+        // Surface a mid-session SCStream death instead of silently degrading to
+        // mic-only: without this, an SCK failure during a call loses the entire
+        // system channel with no visible signal until the transcript is read.
+        systemCapture.onStreamStopped = { [weak self] reason in
+            Task { @MainActor in
+                self?.lastError = "System audio capture stopped (\(reason)). The other side is no longer transcribed — stop and restart the session to recover."
+            }
+        }
         let sysStreams: SystemAudioCapture.CaptureStreams?
         do {
             sysStreams = try await systemCapture.bufferStream(appBundleID: appBundleID)
@@ -408,6 +418,7 @@ final class TranscriptionEngine {
         } catch {
             let msg = "Failed to start system audio: \(error.localizedDescription)"
             diagLog("[ENGINE-5-FAIL] \(msg)")
+            engineLog.error("system audio capture failed to start: \(error.localizedDescription, privacy: .public)")
             lastError = msg
             sysStreams = nil
         }
