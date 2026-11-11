@@ -3,12 +3,7 @@ import CoreAudio
 import Foundation
 import Observation
 
-/// Detects active meetings by combining two signals:
-///   1. A watched conferencing app is running (NSWorkspace).
-///   2. The default microphone is actively in use (CoreAudio).
-///
-/// Recording only starts when both are true, preventing false triggers when
-/// the meeting app is open but idle (no call in progress).
+/// Detects meetings from input I/O attributed to a watched conferencing app.
 @Observable
 @MainActor
 final class MeetingMonitor {
@@ -27,27 +22,17 @@ final class MeetingMonitor {
         "com.loom.desktop":           "Loom",
     ]
 
-    /// True when a watched app is running AND the mic is actively in use.
+    /// True when a watched app is capturing audio input.
     private(set) var isMeetingActive = false
 
     private weak var settings: AppSettings?
     private weak var recordingState: RecordingState?
     private var configured = false
 
-    // NSWorkspace observers
-    private var launchObserver: Any?
-    private var terminateObserver: Any?
-
-    // State
-    private var watchedAppRunning = false
-    private var micActive = false
-    private var micDeviceID: AudioDeviceID = 0
-
     // Tasks
     private var pollingTask: Task<Void, Never>?
     private var startTask: Task<Void, Never>?
     private var stopTask: Task<Void, Never>?
-    private var triggerBundleID: String?
 
     // MARK: - Setup
 
@@ -58,16 +43,8 @@ final class MeetingMonitor {
         self.settings = settings
         self.recordingState = recordingState
 
-        watchedAppRunning = Self.anyWatchedAppRunning()
-        micDeviceID = Self.defaultInputDeviceID()
-        micActive = micDeviceID != 0 && Self.queryMicRunning(micDeviceID)
-
-        installAppObservers()
         startPolling()
-        updateMeetingActive()
     }
-
-    // MARK: - Mic polling
 
     private func startPolling() {
         pollingTask = Task { [weak self] in
@@ -80,59 +57,15 @@ final class MeetingMonitor {
     }
 
     private func pollMicState() {
-        // Re-resolve device ID in case default input changed.
-        let deviceID = Self.defaultInputDeviceID()
-        if deviceID != micDeviceID { micDeviceID = deviceID }
-
-        let nowActive = deviceID != 0 && Self.queryMicRunning(deviceID)
-        guard nowActive != micActive else { return }
-        micActive = nowActive
-        updateMeetingActive()
-
-        if micActive {
+        guard let active = Self.watchedAppUsingInput(), active != isMeetingActive else { return }
+        isMeetingActive = active
+        if active {
+            stopTask?.cancel()
             considerStarting()
         } else {
+            startTask?.cancel()
             considerStopping()
         }
-    }
-
-    // MARK: - NSWorkspace observers
-
-    private func installAppObservers() {
-        let ws = NSWorkspace.shared.notificationCenter
-
-        launchObserver = ws.addObserver(
-            forName: NSWorkspace.didLaunchApplicationNotification,
-            object: nil, queue: .main
-        ) { [weak self] note in
-            let bundleID = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier
-            Task { @MainActor [weak self] in self?.handleLaunch(bundleID: bundleID) }
-        }
-
-        terminateObserver = ws.addObserver(
-            forName: NSWorkspace.didTerminateApplicationNotification,
-            object: nil, queue: .main
-        ) { [weak self] note in
-            let bundleID = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier
-            Task { @MainActor [weak self] in self?.handleTerminate(bundleID: bundleID) }
-        }
-    }
-
-    private func handleLaunch(bundleID: String?) {
-        guard let bundleID, Self.watchedApps[bundleID] != nil else { return }
-        watchedAppRunning = true
-        updateMeetingActive()
-        stopTask?.cancel()
-        // Mic may already be active (e.g. FaceTime launched mid-call).
-        if micActive { considerStarting() }
-    }
-
-    private func handleTerminate(bundleID: String?) {
-        guard let bundleID, Self.watchedApps[bundleID] != nil else { return }
-        watchedAppRunning = Self.anyWatchedAppRunning()
-        updateMeetingActive()
-        startTask?.cancel()
-        if bundleID == triggerBundleID { considerStopping() }
     }
 
     // MARK: - Start / stop logic
@@ -140,7 +73,7 @@ final class MeetingMonitor {
     private func considerStarting() {
         guard let settings, let recordingState,
               settings.autoMeetingDetect,
-              watchedAppRunning, micActive,
+              isMeetingActive,
               !recordingState.isRecording else { return }
 
         let delaySecs = settings.meetingDetectDelaySecs
@@ -148,14 +81,10 @@ final class MeetingMonitor {
         startTask = Task {
             if delaySecs > 0 {
                 try? await Task.sleep(nanoseconds: UInt64(delaySecs) * 1_000_000_000)
-                guard !Task.isCancelled else { return }
-                // Re-check after delay — both signals must still be true.
-                guard self.watchedAppRunning, self.micActive,
-                      !(self.recordingState?.isRecording ?? true) else { return }
             }
-            self.triggerBundleID = NSWorkspace.shared.runningApplications
-                .first(where: { Self.watchedApps[$0.bundleIdentifier ?? ""] != nil })?
-                .bundleIdentifier
+            guard !Task.isCancelled, settings.autoMeetingDetect,
+                  Self.watchedAppUsingInput() == true,
+                  !recordingState.isRecording else { return }
             NotificationCenter.default.post(name: .hushscribeStartCallCapture, object: nil)
         }
     }
@@ -169,49 +98,45 @@ final class MeetingMonitor {
         stopTask?.cancel()
         stopTask = Task {
             try? await Task.sleep(nanoseconds: UInt64(stopDelaySecs) * 1_000_000_000)
-            guard !Task.isCancelled, !self.isMeetingActive else { return }
-            self.triggerBundleID = nil
+            guard !Task.isCancelled, settings.autoMeetingDetect, recordingState.isRecording,
+                  Self.watchedAppUsingInput() == false else { return }
             NotificationCenter.default.post(name: .hushscribeStopRecording, object: nil)
         }
     }
 
-    private func updateMeetingActive() {
-        isMeetingActive = watchedAppRunning && micActive
-    }
-
-    // MARK: - CoreAudio helpers
-
-    private static func defaultInputDeviceID() -> AudioDeviceID {
-        var deviceID = AudioDeviceID(0)
-        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
-        var addr = AudioObjectPropertyAddress(
-            mSelector: kAudioHardwarePropertyDefaultInputDevice,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        AudioObjectGetPropertyData(
-            AudioObjectID(kAudioObjectSystemObject),
-            &addr, 0, nil, &size, &deviceID
-        )
-        return deviceID == kAudioDeviceUnknown ? 0 : deviceID
-    }
-
-    private static func queryMicRunning(_ deviceID: AudioDeviceID) -> Bool {
-        var running: UInt32 = 0
-        var size = UInt32(MemoryLayout<UInt32>.size)
-        var addr = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyDeviceIsRunningSomewhere,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        AudioObjectGetPropertyData(deviceID, &addr, 0, nil, &size, &running)
-        return running != 0
-    }
-
-    private static func anyWatchedAppRunning() -> Bool {
-        NSWorkspace.shared.runningApplications.contains {
-            guard let id = $0.bundleIdentifier else { return false }
-            return watchedApps[id] != nil
+    // A failed list read is inconclusive (for example, a process exited mid-query).
+    private static func watchedAppUsingInput() -> Bool? {
+        let system = AudioObjectID(kAudioObjectSystemObject)
+        var address = propertyAddress(kAudioHardwarePropertyProcessObjectList)
+        var size: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(system, &address, 0, nil, &size) == noErr else {
+            return nil
         }
+        let stride = MemoryLayout<AudioObjectID>.stride
+        guard size > 0 else { return false }
+        var processes = [AudioObjectID](repeating: 0, count: Int(size) / stride)
+        guard AudioObjectGetPropertyData(system, &address, 0, nil, &size, &processes) == noErr else {
+            return nil
+        }
+        return processes.prefix(Int(size) / stride).contains { process in
+            var running: UInt32 = 0
+            var bytes = UInt32(MemoryLayout.size(ofValue: running))
+            var input = propertyAddress(kAudioProcessPropertyIsRunningInput)
+            guard AudioObjectGetPropertyData(process, &input, 0, nil, &bytes, &running) == noErr,
+                  running != 0 else { return false }
+
+            var bundle: Unmanaged<CFString>?
+            bytes = UInt32(MemoryLayout.size(ofValue: bundle))
+            var bundleID = propertyAddress(kAudioProcessPropertyBundleID)
+            guard AudioObjectGetPropertyData(process, &bundleID, 0, nil, &bytes, &bundle) == noErr,
+                  let id = bundle?.takeRetainedValue() as String? else { return false }
+            // Electron apps may capture through a helper with a child bundle identifier.
+            return watchedApps.keys.contains { id == $0 || id.hasPrefix($0 + ".") }
+        }
+    }
+
+    private static func propertyAddress(_ selector: AudioObjectPropertySelector) -> AudioObjectPropertyAddress {
+        AudioObjectPropertyAddress(mSelector: selector, mScope: kAudioObjectPropertyScopeGlobal,
+                                   mElement: kAudioObjectPropertyElementMain)
     }
 }
