@@ -42,8 +42,30 @@ final class StreamingTranscriber: @unchecked Sendable {
 
     /// Silero VAD expects chunks of 4096 samples (256ms at 16kHz).
     private static let vadChunkSize = 4096
-    /// Flush speech for transcription every ~6 seconds (96,000 samples at 16kHz).
-    private static let flushInterval = 96_000
+    // Continuous speech used to be flushed every 6 s at a fixed sample count. That cut words
+    // in half and started each piece without context, so words at the joins were lost or
+    // replaced by invented ones.
+    /// During continuous speech, transcribe after at most ~14 s (one recogniser window)...
+    private static let maxSegment = 224_000
+    /// ...cutting at the quietest moment of the last 4 s, so the cut falls between words.
+    private static let splitSearch = 64_000
+    /// Audio kept from just before the detector reports speech (it reports late).
+    private static let preRoll = 8_192
+
+    /// Index at which to cut `samples`: the centre of the quietest 100 ms in its last 4 s.
+    static func quietestSplit(_ samples: [Float]) -> Int {
+        let win = 1_600, hop = 800
+        let start = max(win, samples.count - splitSearch)
+        var best = samples.count, bestEnergy = Float.greatestFiniteMagnitude
+        var i = start
+        while i + win <= samples.count - win {
+            var e: Float = 0
+            for j in i..<(i + win) { e += samples[j] * samples[j] }
+            if e < bestEnergy { bestEnergy = e; best = i + win / 2 }
+            i += hop
+        }
+        return best
+    }
 
     /// Main loop: reads audio buffers, runs VAD, transcribes speech segments.
     /// - Parameter offsetTracker: optional tracker updated with total 16 kHz samples consumed,
@@ -55,6 +77,7 @@ final class StreamingTranscriber: @unchecked Sendable {
         var speechSamples: [Float] = []
         var vadBuffer: [Float] = []
         var isSpeaking = false
+        var recent: [Float] = []        // the last moments of non-speech audio (pre-roll)
         var bufferCount = 0
         var consecutiveErrors = 0
         var totalVADSamples = 0
@@ -96,7 +119,8 @@ final class StreamingTranscriber: @unchecked Sendable {
                         switch event.kind {
                         case .speechStart:
                             isSpeaking = true
-                            speechSamples.removeAll(keepingCapacity: true)
+                            speechSamples = recent      // keep the onset the detector was late for
+                            recent.removeAll(keepingCapacity: true)
                             onSpeechStart?()
                             diagLog("[\(self.speaker.rawValue)] speech start")
 
@@ -118,13 +142,19 @@ final class StreamingTranscriber: @unchecked Sendable {
                         }
                     }
 
+                    if !isSpeaking {
+                        recent.append(contentsOf: chunk)
+                        if recent.count > Self.preRoll { recent.removeFirst(recent.count - Self.preRoll) }
+                    }
                     if isSpeaking {
                         speechSamples.append(contentsOf: chunk)
 
-                        // Flush every ~3s for near-real-time output during continuous speech
-                        if speechSamples.count >= Self.flushInterval {
-                            let segment = speechSamples
-                            speechSamples.removeAll(keepingCapacity: true)
+                        // Long unbroken speech: transcribe up to the quietest recent moment and
+                        // carry the rest into the next piece, so no audio is dropped.
+                        if speechSamples.count >= Self.maxSegment {
+                            let cut = Self.quietestSplit(speechSamples)
+                            let segment = Array(speechSamples[..<cut])
+                            speechSamples = Array(speechSamples[cut...])
                             if await !transcribeSegment(segment) {
                                 consecutiveErrors += 1
                                 if consecutiveErrors > 10 { break outerLoop }
