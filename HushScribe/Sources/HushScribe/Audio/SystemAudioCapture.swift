@@ -48,8 +48,13 @@ final class SystemAudioCapture: NSObject, @unchecked Sendable, SCStreamDelegate,
             filter = SCContentFilter(display: display, excludingWindows: [])
         }
 
-        // Set up audio buffer file for post-session diarization
-        let bufferURL = FileManager.default.temporaryDirectory.appendingPathComponent("hushscribe_sys_audio_\(UUID().uuidString).wav")
+        // Set up audio buffer file for post-session diarization, unless the user chose never
+        // to store call audio. With no buffer path, nothing is written in the audio callback
+        // and post-session diarization is skipped.
+        let keepAudio = UserDefaults.standard.object(forKey: AppSettings.keepCallAudioKey) as? Bool ?? true
+        let bufferURL = keepAudio
+            ? FileManager.default.temporaryDirectory.appendingPathComponent("hushscribe_sys_audio_\(UUID().uuidString).wav")
+            : nil
         _bufferFilePath.withLock { $0 = bufferURL }
         _audioFileWriter.withLock { $0 = nil } // will be created on first audio callback
 

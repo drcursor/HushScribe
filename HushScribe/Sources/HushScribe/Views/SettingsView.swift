@@ -138,6 +138,14 @@ private struct RecordingSettingsTab: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("Privacy") {
+                Toggle("Keep call audio for speaker separation", isOn: $settings.keepCallAudioForDiarization)
+                    .font(.system(size: 12))
+                Text("During a Call Capture, system audio is buffered to a temporary file so speakers can be told apart when the call ends; the file is deleted afterwards. Turn this off to never write call audio to disk. Remote participants then share one speaker label. Takes effect on the next capture.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
         }
         .formStyle(.grouped)
         .onAppear {

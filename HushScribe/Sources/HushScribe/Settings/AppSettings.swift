@@ -146,6 +146,14 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(sysVadThreshold, forKey: "sysVadThreshold") }
     }
 
+    /// When true (the default), call audio is buffered to a temporary file during a Call
+    /// Capture so speakers can be separated afterwards. When false, no audio is ever written
+    /// to disk and remote speakers keep a single shared label.
+    var keepCallAudioForDiarization: Bool {
+        didSet { UserDefaults.standard.set(keepCallAudioForDiarization, forKey: AppSettings.keepCallAudioKey) }
+    }
+    nonisolated static let keepCallAudioKey = "keepCallAudioForDiarization"
+
     /// When true, recording starts automatically when a meeting app is detected.
     var autoMeetingDetect: Bool {
         didSet { UserDefaults.standard.set(autoMeetingDetect, forKey: "autoMeetingDetect") }
@@ -214,6 +222,7 @@ final class AppSettings {
         }
         let storedThreshold = defaults.double(forKey: "sysVadThreshold")
         self.sysVadThreshold = storedThreshold > 0 ? storedThreshold : 0.92
+        self.keepCallAudioForDiarization = defaults.object(forKey: AppSettings.keepCallAudioKey) as? Bool ?? true
         self.autoMeetingDetect = defaults.bool(forKey: "autoMeetingDetect")
         let storedDelay = defaults.integer(forKey: "meetingDetectDelaySecs")
         self.meetingDetectDelaySecs = storedDelay > 0 ? storedDelay : 3
@@ -249,6 +258,7 @@ final class AppSettings {
             CustomSummaryPrompt(name: "", body: ""),
         ]
         sysVadThreshold = 0.92
+        keepCallAudioForDiarization = true
         autoMeetingDetect = false
         meetingDetectDelaySecs = 3
         meetingStopDelaySecs = 5
